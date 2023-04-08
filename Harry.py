@@ -333,7 +333,8 @@ macros = {
     "TIC": MacroTic(),
     "ACKNOW": MacroAcknow(),
     "ACKWARD": MacroAwkward(),
-    "SIMPLENATEX": MacroNatex()
+    "SIMPLENATEX": MacroNatex(),
+    "GPTEVAL": MacroGPTJSON
 
 }
 
