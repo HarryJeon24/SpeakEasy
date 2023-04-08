@@ -12,8 +12,6 @@ import openai
 from gtts import gTTS
 from src.utils import MacroGPTJSON, MacroNLG
 from enum import Enum
-
-
 class V(Enum):
     objective = 0,  # str cut, color, perm, error
     appointment_hours = 1  # str yes, no
@@ -57,14 +55,13 @@ transitions_evaluation = {
     'state': 'evaluation',
     '`Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.` #SET($RESPONSE="Now could you do a evaluation of me? How was my overall behavior?") #GTTS #USERINPUT': {
         '#GPTEVAL': {
-            '`Thank you for your feedback.`': 'end'
+            '`Thank you for your feedback.` #GTTS $RESPONSE=#EVAL #GTTS': 'end'
         },
         'error': {
             '`Sorry, I did not understand it.`': 'end'
         }
     }
 }
-
 
 class MacroNatex(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -73,15 +70,13 @@ class MacroNatex(Macro):
         else:
             return False
 
-
 class MacrogTTS(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        tts = gTTS(text=vars['RESPONSE'], lang='en')
+        tts = gTTS(text= vars['RESPONSE'], lang='en')
         tts.save("bot_output.mp3")
         os.system("start bot_output.mp3")
         time.sleep(7)
         return True
-
 
 class MacroNumQuestions(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -95,16 +90,14 @@ class MacroNumQuestions(Macro):
             vars['QUESTFEEDBACK'] = "You have asked enough questions."
         return vars['QUESTFEEDBACK']
 
-
 class MacroAVGToken(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        vars['AVGTOKEN'] = len(vars['ANSWERS']) / vars['SPOKENTIME']
+        vars['AVGTOKEN'] = len(vars['ANSWERS'])/vars['SPOKENTIME']
         if vars['AVGTOKEN'] < 0.5:
             vars['TIMEFEEDBACK'] = "You should talk more."
         else:
             vars['TIMEFEEDBACK'] = "You should talk less."
         return vars['TIMEFEEDBACK']
-
 
 class MacroTic(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -128,7 +121,6 @@ class MacroTic(Macro):
 
         return vars['TICFEEDBACK']
 
-
 class MacroAcknow(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         if 'ANSWERS' not in vars:
@@ -144,7 +136,6 @@ class MacroAcknow(Macro):
                                   "your partner said previously."
         return vars['EMPFEEDBACK']
 
-
 class MacroAwkward(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         AWK = ["uh", "um", "like", "you know", "well", "so", "anyway", "actually", "i mean", "to be honest"]
@@ -153,12 +144,11 @@ class MacroAwkward(Macro):
         for tran in AWK:
             if vars['RESPONSE'] in AWK:
                 vars['USEDAWKWARD'] += tran
-        if vars['USEDAWKWARD'] < 5:
+        if vars['USEDAWKWARD']<5:
             vars['AWKFEEDBACK'] = "You did not make many awkward transitions."
         else:
             vars['AWKFEEDBACK'] = "Try to avoid using uh, um, like, you know, and i mean."
         return vars['AWKFEEDBACK']
-
 
 class MacroRecordAudio(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -222,6 +212,9 @@ class MacroRecordAudio(Macro):
 
         return True
 
+class MacroEval(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        return
 
 class MacroRecordAudiolong(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -298,17 +291,12 @@ def load(df: DialogueFlow, varfile: str):
         df.vars().update(d)
     df.run()
     save(df, varfile)
-
-
 def get_objective(vars: Dict[str, Any]):
     vars["OBJ"] = vars[V.objective.name][0]
     return vars[V.objective.name][0]
-
-
 def get_time(vars: Dict[str, Any]):
     vars["TIME"] = vars[V.appointment_hours.name][0]
     return vars[V.appointment_hours.name][0]
-
 
 macros = {
     "USERINPUT": MacroRecordAudio(),
@@ -334,7 +322,8 @@ macros = {
     "ACKNOW": MacroAcknow(),
     "ACKWARD": MacroAwkward(),
     "SIMPLENATEX": MacroNatex(),
-    "GPTEVAL": MacroGPTJSON
+    "GPTEVAL": MacroGPTJSON,
+    "FINALEVAL": MacroEval()
 
 }
 
