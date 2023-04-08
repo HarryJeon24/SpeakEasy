@@ -8,6 +8,7 @@ from emora_stdm import DialogueFlow, Macro, Ngrams
 import re
 import pyaudio
 import wave
+
 transitions = {
     'state': 'start',
     '#TIME #WEATHER #ASKNAME': {
@@ -322,3 +323,4 @@ df.add_macros(macros)
 
 if __name__ == '__main__':
     load(df, 'C:/Users/Harry/PycharmProjects/SpeakEasy/visits.pkl')
+
