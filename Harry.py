@@ -13,8 +13,7 @@ from gtts import gTTS
 from src.utils import MacroGPTJSON, MacroNLG
 from enum import Enum
 class V(Enum):
-    objective = 0,  # str cut, color, perm, error
-    appointment_hours = 1  # str yes, no
+    evaluation = 0,  # str cut, color, perm, error
 
 
 transitions = {
@@ -53,12 +52,12 @@ transitions_feedback = {
 }
 transitions_evaluation = {
     'state': 'evaluation',
-    '`Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.` #SET($RESPONSE="Now could you do a evaluation of me? How was my overall behavior?") #GTTS #USERINPUT': {
+    '`Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.` #SET($RESPONSE="Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.") #GTTSL #USEREVAL': {
         '#GPTEVAL': {
-            '`Thank you for your feedback.` #GTTS $RESPONSE=#EVAL #GTTS': 'end'
+            '`Thank you for your feedback.` #SET($RESPONSE= "Thank you for your feedback.") #GTTS $RESPONSE=$EVAL #GTTS': 'end'
         },
         'error': {
-            '`Sorry, I did not understand it.`': 'end'
+            '`Sorry, I did not understand it.` #SET($RESPONSE="Sorry, I did not understand it.") #GTTS': 'end'
         }
     }
 }
@@ -77,7 +76,13 @@ class MacrogTTS(Macro):
         os.system("start bot_output.mp3")
         time.sleep(7)
         return True
-
+class MacrogTTSLong(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        tts = gTTS(text= vars['RESPONSE'], lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(20)
+        return True
 class MacroNumQuestions(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         if 'ANSWERS' not in vars:
@@ -157,7 +162,7 @@ class MacroRecordAudio(Macro):
         CHANNELS = 1
         RATE = 44100
         CHUNK = 1024
-        RECORD_SECONDS = 5
+        RECORD_SECONDS = 15
 
         # Specify the directory to save the file
         SAVE_DIR = "C:/Users/Harry/PycharmProjects/conversational-ai/resources"
@@ -223,7 +228,7 @@ class MacroRecordAudiolong(Macro):
         CHANNELS = 1
         RATE = 44100
         CHUNK = 1024
-        RECORD_SECONDS = 5
+        RECORD_SECONDS = 30
 
         # Specify the directory to save the file
         SAVE_DIR = "C:/Users/Harry/PycharmProjects/conversational-ai/resources"
@@ -291,39 +296,24 @@ def load(df: DialogueFlow, varfile: str):
         df.vars().update(d)
     df.run()
     save(df, varfile)
-def get_objective(vars: Dict[str, Any]):
-    vars["OBJ"] = vars[V.objective.name][0]
-    return vars[V.objective.name][0]
-def get_time(vars: Dict[str, Any]):
-    vars["TIME"] = vars[V.appointment_hours.name][0]
-    return vars[V.appointment_hours.name][0]
+def get_eval(vars: Dict[str, Any]):
+    vars["EVAL"] = "I will do my best to improve " + vars[V.evaluation.name][0] + " before I see you again."
+    return vars[V.evaluation.name][0]
 
 macros = {
     "USERINPUT": MacroRecordAudio(),
     "USEREVAL": MacroRecordAudiolong(),
     "GTTS": MacrogTTS(),
-    'GET_OBJECTIVE': MacroNLG(get_objective),
-    'GET_TIME': MacroNLG(get_time),
-    'SET_OBJECTIVE': MacroGPTJSON('What does the speaker wants to do? Answer in one of four options: haircut '
-                                  'appointment, perm appointment, hair coloring appointment, error',
-                                  {V.objective.name: ["haircut appointment"]}),
-    'SET_TIME_CUT': MacroGPTJSON(
-        'The available time for hair cut is Monday 10 AM, 1PM, 2PM, and Tuesday 2PM. Is the time the speaker wants available? Answer in yes or no.',
-        {V.appointment_hours.name: ["yes"]}),
-    'SET_TIME_COLOR': MacroGPTJSON(
-        'The available time for hair coloring is Wednesday 10 AM, 11 AM, 1 PM, and Thursday 10 AM, 11 AM. Is the time the speaker wants available? Answer in yes or no.',
-        {V.appointment_hours.name: ["yes"]}),
-    'SET_TIME_PERM': MacroGPTJSON(
-        'The available time for perm is Friday 10 AM, 11 AM, 1 PM, 2 PM, and Saturday 10 AM, 2PM. Is the time the speaker wants available? Answer in yes or no.',
-        {V.appointment_hours.name: ["yes"]}),
+    "GTTSL": MacrogTTSLong(),
+    'GET_EVAL': MacroNLG(get_eval()),
+    'GPTEVAL': MacroGPTJSON('What aspects does the speaker want me to improve the most?',
+                                  {V.evaluation.name: ["intelligence"]}),
     "QUEST": MacroNumQuestions(),
     "SPEED": MacroAVGToken(),
     "TIC": MacroTic(),
     "ACKNOW": MacroAcknow(),
     "ACKWARD": MacroAwkward(),
-    "SIMPLENATEX": MacroNatex(),
-    "GPTEVAL": MacroGPTJSON,
-    "FINALEVAL": MacroEval()
+    "SIMPLENATEX": MacroNatex()
 
 }
 
