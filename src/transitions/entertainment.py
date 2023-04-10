@@ -18,6 +18,10 @@ class V(Enum):
     favorite_movie_theme = 3  # str
     favorite_movie_character = 4  # str
     favorite_song = 5  # dict
+    music_liked_aspect = 6  # str
+    music_genre_preference = 7  # str
+    music_theme_preference = 8  # str
+    music_artist_preference = 9  # str
 
 
 class MacroRecommendMovie(Macro):
@@ -123,7 +127,7 @@ def main() -> DialogueFlow:
     transitions_movie = {
         'state': 'movie',
         '`Do you have a favorite movie?`': {
-            '[yes]': {
+            '[{yes, of course, sure, definitely}]': {
                 '`Amazing! What is your favorite movie?`': {
                     '#SET_MOVIE_PREFERENCE': {
                         'state': 'movie_talk',
@@ -137,7 +141,9 @@ def main() -> DialogueFlow:
                                         'movie?`': {
                                             '#SET_MOVIE_CHARACTER_PREFERENCE': {
                                                 '`Ok! Can you tell me more about` #GET_MOVIE_CHARACTER_PREFERENCE ` ?`': {
-                                                    '`Thank you for sharing! Now, I want to recommend you a movie!`': 'movie_rec',
+                                                    'error': {
+                                                        '`Thank you for sharing! Now, I want to recommend you a movie!`': 'movie_rec',
+                                                    }
                                                 }
                                             }
                                         }
@@ -162,18 +168,18 @@ def main() -> DialogueFlow:
                 '`Here is a brief overview: `#MOVIE_GET_OVERVIEW': {
                     '<{another, already}, {film, movie}>': 'movie_rec',
                     'error': {
-                        '`Enjoy!`': 'end'
+                        '`Enjoy!`': 'select_topic'
                     }
                 }
             },
             '[{great, thanks, ok, perfect, amazing}]': {
-                '`Enjoy!`': 'end'
+                '`Enjoy!`': 'select_topic'
             },
             'error': {
                 '`Sorry, I don\'t understand that. Do you want another movie recommendation?`': {
                     '[{yes, ok, sure}]': 'movie_rec',
                     'error': {
-                        '`Ok, see you next time!`': 'end'
+                        '`Ok!`': 'select_topic'
                     }
                 }
             }
@@ -183,11 +189,36 @@ def main() -> DialogueFlow:
     transitions_music = {
         'state': 'music',
         '`Do you have a favorite song?`': {
-            '[yes]': {
+            '[{yes, of course, sure, definitely}]': {
                 '`Amazing! What is your favorite song?`': {
                     '#SET_MUSIC_PREFERENCE': {
-                        '`Oh, ` #GET_MUSIC_PREFERENCE `is such a good song.`': 'end',
                         'state': 'music_talk',
+                        '`Oh, ` #GET_MUSIC_PREFERENCE `is such a good song. What do you like about it?`': {
+                            '#SET_MUSIC_LIKED_ASPECT': {
+                                '`Interesting! I can see why you like ` #GET_MUSIC_LIKED_ASPECT `in the song. '
+                                'What genre is` #GET_MUSIC_PREFERENCE `from?`': {
+                                    '#SET_MUSIC_GENRE_PREFERENCE': {
+                                        '`Oh, I also enjoy ` #GET_MUSIC_GENRE_PREFERENCE `music. Can you tell me '
+                                        'more about the theme of` #GET_MUSIC_PREFERENCE `?`': {
+                                            '#SET_MUSIC_THEME_PREFERENCE': {
+                                                '`That\'s really cool. So, the theme of` #GET_MUSIC_PREFERENCE `is` '
+                                                '#GET_MUSIC_THEME_PREFERENCE `. Who is your favorite artist for '
+                                                'that genre?`': {
+                                                    '#SET_MUSIC_ARTIST_PREFERENCE': {
+                                                        '`Great choice! I love ` #GET_MUSIC_ARTIST_PREFERENCE `too. '
+                                                        'Can you tell me more about their music?`': {
+                                                            'error': {
+                                                                '`Thank you for sharing! Now, I want to recommend you a song!`': 'music_rec',
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -205,18 +236,18 @@ def main() -> DialogueFlow:
                 '`The song\'s artist is `#SONG_GET_ARTIST`.`': {
                     '<{another, already}, {song, music}>': 'music_rec',
                     'error': {
-                        '`Enjoy!`': 'end'
+                        '`Enjoy!`': 'select_topic'
                     }
                 }
             },
             '[{great, thanks, ok, perfect, amazing}]': {
-                '`Enjoy!`': 'end'
+                '`Enjoy!`': 'select_topic'
             },
             'error': {
                 '`Sorry, I don\'t understand that. Do you want another music recommendation?`': {
                     '[{yes, ok, sure}]': 'music_rec',
                     'error': {
-                        '`Ok, see you next time!`': 'end'
+                        '`Ok!`': 'select_topic'
                     }
                 }
             }
@@ -255,8 +286,32 @@ def main() -> DialogueFlow:
         'GET_MUSIC_PREFERENCE': MacroNLG(get_favorite_music),
         'SET_MUSIC_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s favorite music/song?',
-            {V.favorite_movie.name: "Love Story"},
-            {V.favorite_movie.name: "N/A"}
+            {V.favorite_song.name: "Love Story"},
+            {V.favorite_song.name: "N/A"}
+        ),
+        'GET_MUSIC_LIKED_ASPECT': MacroNLG(get_music_liked_aspect),
+        'SET_MUSIC_LIKED_ASPECT': MacroGPTJSON(
+            'What does the speaker like about the song?',
+            {V.music_liked_aspect.name: "the melody"},
+            {V.music_liked_aspect.name: "N/A"}
+        ),
+        'GET_MUSIC_GENRE_PREFERENCE': MacroNLG(get_music_genre_preference),
+        'SET_MUSIC_GENRE_PREFERENCE': MacroGPTJSON(
+            'What is the speaker\'s favorite genre of music?',
+            {V.music_genre_preference.name: "pop"},
+            {V.music_genre_preference.name: "N/A"}
+        ),
+        'GET_MUSIC_THEME_PREFERENCE': MacroNLG(get_music_theme_preference),
+        'SET_MUSIC_THEME_PREFERENCE': MacroGPTJSON(
+            'What is the theme of the speaker\'s favorite song?',
+            {V.music_theme_preference.name: "love"},
+            {V.music_theme_preference.name: "N/A"}
+        ),
+        'GET_MUSIC_ARTIST_PREFERENCE': MacroNLG(get_music_artist_preference),
+        'SET_MUSIC_ARTIST_PREFERENCE': MacroGPTJSON(
+            'Who is the speaker\'s favorite artist for that genre?',
+            {V.music_artist_preference.name: "Taylor Swift"},
+            {V.music_artist_preference.name: "N/A"}
         ),
         'GET_MOVIE': MacroRecommendMovie(),
         'GET_SONG': MacroRecommendSong(),
@@ -293,6 +348,22 @@ def get_movie_character_preference(vars: Dict[str, Any]):
 
 def get_favorite_music(vars: Dict[str, Any]):
     return vars[V.favorite_song.name]
+
+
+def get_music_liked_aspect(vars: Dict[str, Any]):
+    return vars.get(V.music_liked_aspect.name)
+
+
+def get_music_genre_preference(vars: Dict[str, Any]):
+    return vars.get(V.music_genre_preference.name)
+
+
+def get_music_theme_preference(vars: Dict[str, Any]):
+    return vars.get(V.music_theme_preference.name)
+
+
+def get_music_artist_preference(vars: Dict[str, Any]):
+    return vars.get(V.music_artist_preference.name)
 
 
 def get_call_name(vars: Dict[str, Any]):
