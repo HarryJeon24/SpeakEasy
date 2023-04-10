@@ -18,7 +18,7 @@ class V(Enum):
 
 transitions = {
     'state': 'start',
-    '`Hello. How are you?` #SET($RESPONSE="Hello. How are you?") #GTTS #USERINPUT': {
+    '`Hello. How are you?` $RESPONSE="Hello. How are you?" #GTTS #USERINPUT': {
         '[good]': {
             '`Glad to hear that you are doing well :)`': {
                 'error': {
@@ -39,25 +39,24 @@ transitions = {
 transitions_feedback = {
     'state': 'feedback',
     '`Congratulation! The evaluation process is over. Based on the conversation we just had, here are some '
-    'suggestions.` #SET($RESPONSE="Congratulation! The evaluation process is over. Based on the conversation we just '
-    'had, here are some suggestions.") #GTTS $RESPONSE=#QUEST #GTTS $RESPONSE=#SPEED #GTTS'
+    'suggestions.` $RESPONSE="Congratulation! The evaluation process is over. Based on the conversation we just had, here are some suggestions." #GTTS $RESPONSE=#QUEST #GTTS $RESPONSE=#SPEED #GTTS'
     '$RESPONSE=#TIC #GTTS $RESPONSE=#ACKNOW #GTTS $RESPONSE=#ACKWARD #GTTS #USERINPUT': {
-        '#SET($NATEX="yes great wonderful fantastic excellent happy glad perfect awesome thank") #SIMPLENATEX': {
-            '`My pleasure.` #SET($RESPONSE="My pleasure") #GTTS': 'evaluation',
+        '$NATEX="yes great wonderful fantastic excellent happy glad perfect awesome thank" #SIMPLENATEX': {
+            '`My pleasure.` $RESPONSE="My pleasure" #GTTS': 'evaluation',
         },
         'error': {
-            '`I am sorry.` #SET($RESPONSE="I am sorry.") #GTTS': 'evaluation'
+            '`I am sorry.` $RESPONSE="I am sorry." #GTTS': 'evaluation'
         }
     }
 }
 transitions_evaluation = {
     'state': 'evaluation',
-    '`Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.` #SET($RESPONSE="Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.") #GTTSL #USEREVAL': {
+    '`Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint.` $RESPONSE="Now could you do a evaluation for me? How was my overall behavior? Was I coherent? Was I smart enough to make good conversation with you? Would you consider make feedback seriously? You will get a longer time to answer it. So do not worry about the time constraint." #GTTSL #USEREVAL': {
         '#GPTEVAL': {
-            '`Thank you for your feedback.` #SET($RESPONSE= "Thank you for your feedback.") #GTTS $RESPONSE=$EVAL #GTTS': 'end'
+            '`Thank you for your feedback.` $RESPONSE= "Thank you for your feedback." #GTTS $RESPONSE=$EVAL #GTTS': 'end'
         },
         'error': {
-            '`Sorry, I did not understand it.` #SET($RESPONSE="Sorry, I did not understand it.") #GTTS': 'end'
+            '`Sorry, I did not understand it.` $RESPONSE="Sorry, I did not understand it." #GTTS': 'end'
         }
     }
 }
@@ -305,7 +304,7 @@ macros = {
     "USEREVAL": MacroRecordAudiolong(),
     "GTTS": MacrogTTS(),
     "GTTSL": MacrogTTSLong(),
-    'GET_EVAL': MacroNLG(get_eval()),
+    'GET_EVAL': MacroNLG(get_eval),
     'GPTEVAL': MacroGPTJSON('What aspects does the speaker want me to improve the most?',
                                   {V.evaluation.name: ["intelligence"]}),
     "QUEST": MacroNumQuestions(),
