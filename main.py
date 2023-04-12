@@ -18,6 +18,9 @@ import pyaudio
 import wave
 from gtts import gTTS
 import threading
+from mutagen.mp3 import MP3
+
+seen_name = False
 
 class V(Enum):
     person_name = 0  # str
@@ -30,35 +33,25 @@ class V(Enum):
 def visits() -> DialogueFlow:
     transitions = {
         'state': 'start',
-        '#TIME #ASK_NAME #USERINPUT': {
-            '#SET_NAME': {
-                # new user
-                '#GET_NAME #IF($NEW_USER=True) `Hi,` $NAME `. Nice to meet you. How are you doing?` #FIRST_TIME #USERINPUT': {
+        '#TIME #ASK_NAME #USERINPUT #SET_NAME': {
+            '#GET_NAME1': {
+                '`Welcome back,` $NAME `! How have you been?` #RETURN #USERINPUT': {
                     '#SET_FEELING': {
-                        '#GET_FEELING `What have you been up to recently?` $RESPONSE="What have you been up to recently?" #GTTS #USERINPUT': {
-                            '#SET_TOPIC': {
-                                '#GET_TOPIC #USERINPUT': {
-                                    'error': {
-                                        '`I also spend a good amount of time` $TOPIC`. Is it part of your everyday routine?` #ROUTINE #USERINPUT': {
-                                            'error': 'health'
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                '#GET_NAME #IF($NEW_USER=False)`Welcome back,` $NAME `! How have you been?` #RETURN #USERINPUT': {
-                    '#SET_FEELING': {
-                        '#GET_FEELING `Did you get a chance to work on those speaking tips I gave you last time?` $RESPONSE="Did you get a chance to work on those speaking tips I gave you last time?" #GTTS #USERINPUT': {
+                        '#GET_FEELING `Did you get a chance to work on those speaking tips I gave you last time?` '
+                        '$RESPONSE="Did you get a chance to work on those speaking tips I gave you last time?" #GTTS '
+                        '#USERINPUT': {
                             '#SET_LISTENED': {
                                 '#GET_LISTENED #USERINPUT': {
                                     '#SET_RATING': {
-                                        '`Thanks for evaluating my feedback! Now, I\'d love to hear more about you. What have you been up to recently?` $RESPONSE="Thanks for evaluating my feedback! Now, I\'d love to hear more about you. What have you been up to recently?" #GTTS #USERINPUT': {
+                                        '`Thanks for evaluating my feedback! Now, I\'d love to hear more about you. '
+                                        'What have you been up to recently?` $RESPONSE="Thanks for evaluating my '
+                                        'feedback! Now, I\'d love to hear more about you. What have you been up to '
+                                        'recently?" #GTTS #USERINPUT': {
                                             '#SET_TOPIC': {
                                                 '#GET_TOPIC #USERINPUT': {
                                                     'error': {
-                                                        '`I spend alot of time` $TOPIC`too. Is it part of your daily schedule?` #ROUTINE #USERINPUT': {
+                                                        '`I spend a lot of time` $TOPIC`too. Is it part of your daily '
+                                                        'schedule?` #ROUTINE #USERINPUT': {
                                                             'error': 'health'
                                                         }
                                                     }
@@ -75,16 +68,39 @@ def visits() -> DialogueFlow:
                                 '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                             }
                         }
-                    }
-
+                    },
+                },
+                'error': {
+                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                 }
+            },
+            '#GET_NAME2': {
+                # new user
+                '`Hi,` $NAME `. Nice to meet you. How are you doing?` #FIRST_TIME #USERINPUT': {
+                    '#SET_FEELING': {
+                        '#GET_FEELING $RESPONSE="What have you been up to recently?" #GTTS #USERINPUT': {
+                            '#SET_TOPIC': {
+                                '#GET_TOPIC #USERINPUT': {
+                                    'error': {
+                                        '`I also spend a good amount of time` $TOPIC`. Is it part of your everyday '
+                                        'routine?` #ROUTINE #USERINPUT': {
+                                            'error': 'end'
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
             },
             'error': {
                 '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
             }
+        },
+        'error': {
+             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
         }
     }
-
     health_transitions = {
         'state': 'health',
     }
@@ -105,6 +121,13 @@ def visits() -> DialogueFlow:
     return df
 
 
+def audio(text: str):
+    tts = gTTS(text=text, lang='en')
+    tts.save("bot_output.mp3")
+    os.system("start bot_output.mp3")
+    time.sleep(MP3("bot_output.mp3").info.length)
+
+
 def get_feeling(vars: Dict[str, Any]):
     feeling = vars[V.person_feeling.name]
     if feeling == "good":
@@ -113,10 +136,9 @@ def get_feeling(vars: Dict[str, Any]):
         vars["FEELING"] = "I'm sorry to hear that:( I hope things get better soon."
     else:
         vars["FEELING"] = "Glad to hear you are doing okay. I'm doing alright too."
-    tts = gTTS(text=vars["FEELING"], lang='en')
-    tts.save("bot_output.mp3")
-    os.system("start bot_output.mp3")
-    time.sleep(7)
+
+    audio(vars["FEELING"])
+
     return vars["FEELING"]
 
 
@@ -153,6 +175,7 @@ class MacroTime(Macro):
 
 
 class MacroFirstTime(Macro):
+
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         a = "Hi," + vars["NAME"] + ". Nice to meet you. How are you doing?"
         tts = gTTS(text=a, lang='en')
@@ -160,6 +183,7 @@ class MacroFirstTime(Macro):
         os.system("start bot_output.mp3")
         time.sleep(5)
         return True
+
 
 class MacroReturn(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
@@ -169,6 +193,7 @@ class MacroReturn(Macro):
         os.system("start bot_output.mp3")
         time.sleep(5)
         return True
+
 
 class MacroRoutine(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
@@ -180,15 +205,15 @@ class MacroRoutine(Macro):
         time.sleep(7)
         return True
 
+
 class MacroAskName(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         options = (
             "What's your name?", "What can I call you?", "Can I have your name?", "What do you call yourself?")
         vars["ASK_NAME"] = random.choice(options)
-        tts = gTTS(text=vars["ASK_NAME"], lang='en')
-        tts.save("bot_output.mp3")
-        os.system("start bot_output.mp3")
-        time.sleep(3)
+
+        audio(vars["ASK_NAME"])
+
         return vars["ASK_NAME"]
 
 def get_topic(vars: Dict[str, Any]):
@@ -202,22 +227,37 @@ def get_topic(vars: Dict[str, Any]):
     return a
 
 
-def get_name(vars: Dict[str, Any]):
-    name = vars[V.person_name.name]
-    vars['NAME'] = name
-    vn = 'LIST_OF_NAMES'
-    usersDict = {}
-    new_user = True
-    if 'USERS' not in vars:
-        vars['USERS'] = usersDict
-    else:
-        if name in vars['USERS']:
-            new_user = False
-        else:
-            (vars['USERS'])[name] = []
-    vars['NEW_USER'] = new_user
-    return True
+class MacroGetName1(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars[V.person_name.name]
+        vars['NAME'] = name
 
+        usersDict = {}
+        if 'USERS' not in vars:
+            vars['USERS'] = usersDict
+
+        if name in vars['USERS']:
+            vars['NEW_USER'] = False
+            return True
+
+        return False
+
+
+class MacroGetName2(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars[V.person_name.name]
+        vars['NAME'] = name
+
+        usersDict = {}
+        if 'USERS' not in vars:
+            vars['USERS'] = usersDict
+
+        if name in vars['USERS']:
+            return False
+        else:
+            vars['USERS'][name] = []
+            vars['NEW_USER'] = True
+            return True
 
 
 class MacroSetRating(Macro):
@@ -245,6 +285,7 @@ class MacrogTTS(Macro):
         os.system("start bot_output.mp3")
         time.sleep(10)
         return True
+
 
 class MacroRecordAudio(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -331,15 +372,15 @@ class MacroRecordAudio(Macro):
         return True
 
 
-
 macros = {
     'TIME': MacroTime(),
     'ASK_NAME': MacroAskName(),
-    'GET_NAME': MacroNLG(get_name),
+    'GET_NAME1': MacroGetName1(),
+    'GET_NAME2': MacroGetName2(),
     'SET_NAME': MacroGPTJSON(
         'How does the speaker want to be called?',
         {V.person_name.name: "Mike Johnson"},
-        {V.person_name.name: "Michael"}
+        {V.person_name.name: ""}
     ),
     'SET_FEELING': MacroGPTJSON(
         'Is the speaker doing good, bad, or okay?',
