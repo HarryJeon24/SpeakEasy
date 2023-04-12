@@ -49,17 +49,16 @@ def visits() -> DialogueFlow:
                     }
                 },
                 '#GET_NAME #IF($NEW_USER=False)`Welcome back,` $NAME `! How have you been?` #RETURN #USERINPUT': {
-
                     '#SET_FEELING': {
-                        '#GET_FEELING `Did you get a chance to work on those speaking tips I gave you last time?`': {
+                        '#GET_FEELING `Did you get a chance to work on those speaking tips I gave you last time?` $RESPONSE="Did you get a chance to work on those speaking tips I gave you last time?" #GTTS #USERINPUT': {
                             '#SET_LISTENED': {
-                                '#GET_LISTENED': {
+                                '#GET_LISTENED #USERINPUT': {
                                     '#SET_RATING': {
-                                        '`Thanks for evaluating my feedback! Now, I\'d love to hear more about you. What have you been up to recently?`': {
+                                        '`Thanks for evaluating my feedback! Now, I\'d love to hear more about you. What have you been up to recently?` $RESPONSE="Thanks for evaluating my feedback! Now, I\'d love to hear more about you. What have you been up to recently?" #GTTS #USERINPUT': {
                                             '#SET_TOPIC': {
-                                                '#GET_TOPIC': {
+                                                '#GET_TOPIC #USERINPUT': {
                                                     'error': {
-                                                        '#UNX `I spend alot of time` $TOPIC`too. Is it part of your daily schedule?`': {
+                                                        '`I spend alot of time` $TOPIC`too. Is it part of your daily schedule?` #ROUTINE #USERINPUT': {
                                                             'error': 'health'
                                                         }
                                                     }
@@ -73,7 +72,7 @@ def visits() -> DialogueFlow:
 
                             },
                             'error': {
-                                '`Sorry, I didn\'t catch that.`': 'end'
+                                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                             }
                         }
                     }
@@ -81,7 +80,7 @@ def visits() -> DialogueFlow:
                 }
             },
             'error': {
-                '`Sorry, I didn\'t catch that.`': 'end'
+                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
             }
         }
     }
@@ -124,12 +123,16 @@ def get_feeling(vars: Dict[str, Any]):
 def get_listened(vars: Dict[str, Any]):
     listened = vars[V.implemented_advice.name]
     if listened == "yes":
-        return "I'm glad you were able to practice my tips. How helpful would you say the advice was on a scale of 1 to 5 (with 5 being very helpful)?"
+        a = "I'm glad you were able to practice my tips. How helpful would you say the advice was on a scale of 1 to 5 (with 5 being very helpful)?"
     elif listened == "no":
-        return "Hopefully you get a chance to practice them going forwards. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
+        a = "Hopefully you get a chance to practice them going forwards. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
     else:
-        return "Gotcha. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
-
+        a = "Gotcha. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
+    tts = gTTS(text=a, lang='en')
+    tts.save("bot_output.mp3")
+    os.system("start bot_output.mp3")
+    time.sleep(15)
+    return a
 
 
 class MacroTime(Macro):
@@ -157,6 +160,7 @@ class MacroFirstTime(Macro):
         os.system("start bot_output.mp3")
         time.sleep(5)
         return True
+
 class MacroReturn(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         a = "Welcome back," + vars["NAME"] + "! How have you been?"
@@ -168,7 +172,8 @@ class MacroReturn(Macro):
 
 class MacroRoutine(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        a = "I also spend a good amount of time" + vars["TOPIC"] + ". Is it part of your everyday routine?"
+        options = ("I also spend a good amount of time" + vars["TOPIC"] + ". Is it part of your everyday routine?", "I spend alot of time" + vars["TOPIC"] + "too. Is it part of your daily schedule?")
+        a = random.choice(options)
         tts = gTTS(text=a, lang='en')
         tts.save("bot_output.mp3")
         os.system("start bot_output.mp3")
@@ -238,7 +243,7 @@ class MacrogTTS(Macro):
         tts = gTTS(text= vars['RESPONSE'], lang='en')
         tts.save("bot_output.mp3")
         os.system("start bot_output.mp3")
-        time.sleep(7)
+        time.sleep(10)
         return True
 
 class MacroRecordAudio(Macro):
