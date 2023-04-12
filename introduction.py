@@ -56,7 +56,7 @@ def visits() -> DialogueFlow:
                                             '#SET_TOPIC': {
                                                 '#GET_TOPIC': {
                                                     'error': {
-                                                        '#UNX `I spend alot of time` $TOPIC`too. Is it part of your daily schedule?`': {
+                                                        '`I spend alot of time` $TOPIC`too. Do you make it part of your daily schedule?`': {
                                                             'error': 'health'
                                                         }
                                                     }
@@ -145,6 +145,9 @@ class MacroAskName(Macro):
 def get_topic(vars: Dict[str, Any]):
     topic = vars[V.activity.name]
     vars['TOPIC'] = topic
+    if vars['TOPIC'] is "nothing" or "not much" or "nothing much":
+        vars['TOPIC'] = "relaxing"
+        return "Ahh. Sometimes its nice to sit back and relax."
     return topic + " is excellent. It's nice to keep yourself busy while doing what you enjoy."
 
 
@@ -215,9 +218,9 @@ macros = {
     ),
     'SET_RATING': MacroSetRating(),
     'SET_TOPIC': MacroGPTJSON(
-        'What activity has the user been up to',
-        {V.activity.name: "watching sports"},
-        {V.activity.name: "working out"}
+        'What activity has the user been up to, if anything?',
+        {V.activity.name: "watching sports", V.activity.name: "working out"},
+        {V.activity.name: "nothing"}
     ),
     'GET_TOPIC': MacroNLG(get_topic),
     # 'DETERMINE_CATEGORY': MacroGPTJSON(
