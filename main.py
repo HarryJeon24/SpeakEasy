@@ -1,3 +1,5 @@
+import json
+import os.path
 import pickle
 from emora_stdm import DialogueFlow, Macro, Ngrams
 from typing import Dict, Any, List
@@ -10,8 +12,12 @@ from enum import Enum
 from typing import Dict, Any
 import openai
 from emora_stdm import DialogueFlow
-import utils
-from utils import MacroGPTJSON, MacroNLG
+import src.utils
+from src.utils import MacroGPTJSON, MacroNLG
+import pyaudio
+import wave
+from gtts import gTTS
+import threading
 
 class V(Enum):
     person_name = 0  # str
@@ -24,16 +30,16 @@ class V(Enum):
 def visits() -> DialogueFlow:
     transitions = {
         'state': 'start',
-        '#TIME #ASK_NAME': {
-            '#SET_NAME #GET_NAME': {
+        '#TIME #ASK_NAME #USERINPUT': {
+            '#SET_NAME': {
                 # new user
-                '#IF($NEW_USER) `Hi,` $NAME `. Nice to meet you. How are you doing?`': {
+                '#GET_NAME #IF($NEW_USER=True) `Hi,` $NAME `. Nice to meet you. How are you doing?` #FIRST_TIME #USERINPUT': {
                     '#SET_FEELING': {
-                        '#GET_FEELING `What have you been up to recently?`': {
+                        '#GET_FEELING `What have you been up to recently?` $RESPONSE="What have you been up to recently?" #GTTS #USERINPUT': {
                             '#SET_TOPIC': {
-                                '#GET_TOPIC': {
+                                '#GET_TOPIC #USERINPUT': {
                                     'error': {
-                                        '`I also spend a good amount of time` $TOPIC`. Is it part of your everyday routine?`': {
+                                        '`I also spend a good amount of time` $TOPIC`. Is it part of your everyday routine?` #ROUTINE #USERINPUT': {
                                             'error': 'health'
                                         }
                                     }
@@ -42,8 +48,8 @@ def visits() -> DialogueFlow:
                         }
                     }
                 },
-                '`Welcome back,` $NAME `! How have you been?`': {
-                    'score': 0.1,
+                '#GET_NAME #IF($NEW_USER=False)`Welcome back,` $NAME `! How have you been?` #RETURN #USERINPUT': {
+
                     '#SET_FEELING': {
                         '#GET_FEELING `Did you get a chance to work on those speaking tips I gave you last time?`': {
                             '#SET_LISTENED': {
@@ -73,7 +79,6 @@ def visits() -> DialogueFlow:
                     }
 
                 }
-
             },
             'error': {
                 '`Sorry, I didn\'t catch that.`': 'end'
@@ -104,11 +109,16 @@ def visits() -> DialogueFlow:
 def get_feeling(vars: Dict[str, Any]):
     feeling = vars[V.person_feeling.name]
     if feeling == "good":
-        return "I'm happy to hear you are doing well! I'm not so bad myself. "
+        vars["FEELING"] = "I'm happy to hear you are doing well! I'm not so bad myself. "
     elif feeling == "bad":
-        return "I'm sorry to hear that:( I hope things get better soon."
+        vars["FEELING"] = "I'm sorry to hear that:( I hope things get better soon."
     else:
-        return "Glad to hear you are doing okay. I'm doing alright too."
+        vars["FEELING"] = "Glad to hear you are doing okay. I'm doing alright too."
+    tts = gTTS(text=vars["FEELING"], lang='en')
+    tts.save("bot_output.mp3")
+    os.system("start bot_output.mp3")
+    time.sleep(7)
+    return vars["FEELING"]
 
 
 def get_listened(vars: Dict[str, Any]):
@@ -121,28 +131,70 @@ def get_listened(vars: Dict[str, Any]):
         return "Gotcha. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
 
 
+
 class MacroTime(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         hour = time.strftime("%H")
-        if int(hour) < 12:
-            return "Good morning!"
-        if 12 < int(hour) < 17:
-            return "Good afternoon!"
-        else:
-            return "Good evening!"
 
+        if int(hour) < 12:
+            vars["TIME"] = "Good morning!"
+        if 12 < int(hour) < 17:
+            vars["TIME"] = "Good afternoon!"
+        else:
+            vars["TIME"] = "Good evening!"
+        tts = gTTS(text=vars["TIME"], lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(1)
+        return vars["TIME"]
+
+
+class MacroFirstTime(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        a = "Hi," + vars["NAME"] + ". Nice to meet you. How are you doing?"
+        tts = gTTS(text=a, lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(5)
+        return True
+class MacroReturn(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        a = "Welcome back," + vars["NAME"] + "! How have you been?"
+        tts = gTTS(text=a, lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(5)
+        return True
+
+class MacroRoutine(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        a = "I also spend a good amount of time" + vars["TOPIC"] + ". Is it part of your everyday routine?"
+        tts = gTTS(text=a, lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(7)
+        return True
 
 class MacroAskName(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         options = (
             "What's your name?", "What can I call you?", "Can I have your name?", "What do you call yourself?")
-        return random.choice(options)
-
+        vars["ASK_NAME"] = random.choice(options)
+        tts = gTTS(text=vars["ASK_NAME"], lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(3)
+        return vars["ASK_NAME"]
 
 def get_topic(vars: Dict[str, Any]):
     topic = vars[V.activity.name]
     vars['TOPIC'] = topic
-    return topic + " is excellent. It's nice to keep yourself busy while doing what you enjoy."
+    a = topic + " is excellent. It's nice to keep yourself busy while doing what you enjoy."
+    tts = gTTS(text=a, lang='en')
+    tts.save("bot_output.mp3")
+    os.system("start bot_output.mp3")
+    time.sleep(7)
+    return a
 
 
 def get_name(vars: Dict[str, Any]):
@@ -162,15 +214,6 @@ def get_name(vars: Dict[str, Any]):
     return True
 
 
-# def sort_category(vars: Dict[str, Any]):
-#     category = vars[V.category.name]
-#     if category == "health":
-#         vars['HEALTH'] = 'True'
-#     if category == "entertainment":
-#         vars['ENTERTAINMENT'] = 'True'
-#     if category == "entertainment":
-#         vars['TRAVEL'] = 'True'
-
 
 class MacroSetRating(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -187,6 +230,101 @@ class MacroSetRating(Macro):
         if m == "5" or "five" or "Five":
             (vars['USERS'])[vars['NAME']].append(5)
         return True
+
+
+# Macro's for audios
+class MacrogTTS(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        tts = gTTS(text= vars['RESPONSE'], lang='en')
+        tts.save("bot_output.mp3")
+        os.system("start bot_output.mp3")
+        time.sleep(7)
+        return True
+
+class MacroRecordAudio(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        # Define audio recording parameters
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 44100
+        CHUNK = 1024
+
+
+        # Specify the directory to save the file
+        SAVE_DIR = "C:/Users/Harry/PycharmProjects/SpeakEasy/src"
+        if not os.path.exists(SAVE_DIR):
+            os.makedirs(SAVE_DIR)
+
+        # Specify the full path to the WAV file
+        WAVE_OUTPUT_FILENAME = os.path.join(SAVE_DIR, "USERINPUT.wav")
+
+        # Create PyAudio object
+        audio = pyaudio.PyAudio()
+
+        # Start audio stream
+        stream = audio.open(format=FORMAT, channels=CHANNELS,
+                            rate=RATE, input=True,
+                            frames_per_buffer=CHUNK)
+
+        print("Recording... Press Enter to stop")
+
+        # Record start time
+        start_time = time.time()
+
+        # Record audio data
+        frames = []
+        stop_recording = threading.Event()
+
+        def read_audio_data():
+            while not stop_recording.is_set():
+                data = stream.read(CHUNK)
+                frames.append(data)
+
+        # Start recording thread
+        recording_thread = threading.Thread(target=read_audio_data)
+        recording_thread.start()
+
+        # Wait for user input to stop the recording
+        input()
+
+        # Set event to stop the recording thread
+        stop_recording.set()
+        recording_thread.join()
+        # Record end time
+        end_time = time.time()
+        print("Finished recording.")
+
+        # Calculate duration
+        duration = end_time - start_time
+
+        # Stop audio stream
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+
+        # Save audio data to WAV file
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(audio.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+
+        openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
+        audio_file = open("C:/Users/Harry/PycharmProjects/SpeakEasy/src/USERINPUT.wav", "rb")
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        text = transcript['text']
+        vars['USERINPUT'] = text
+        if 'ANSWERS' not in vars:
+            vars['ANSWERS'] = text.lower()
+            vars['SPOKENTIME'] = duration
+        else:
+            vars['ANSWERS'] = vars['ANSWERS'] + ' ' + text.lower()
+            vars['SPOKENTIME'] = vars['SPOKENTIME'] + duration
+        print("Your Input: ", vars['USERINPUT'])
+
+        return True
+
 
 
 macros = {
@@ -217,12 +355,13 @@ macros = {
         {V.activity.name: "working out"}
     ),
     'GET_TOPIC': MacroNLG(get_topic),
-    # 'DETERMINE_CATEGORY': MacroGPTJSON(
-    #     'Which of the following categories is closest to what the user is talking about: health, travel, entertainment, or none of these?',
-    #     {V.category.name: "health"},
-    #     {V.category.name: "entertainment"}
-    # ),
-    # 'SORT_CATEGORY': MacroNLG(sort_category)
+
+    # Audio
+    "GTTS": MacrogTTS(),
+    "USERINPUT": MacroRecordAudio(),
+    "FIRST_TIME": MacroFirstTime(),
+    "ROUTINE": MacroRoutine(),
+    "RETURN": MacroReturn(),
 }
 
 
@@ -233,12 +372,13 @@ def save(df: DialogueFlow, varfile: str):
 
 
 def load(df: DialogueFlow, varfile: str):
-    d = pickle.load(open(varfile, 'rb'))
-    df.vars().update(d)
+    if os.path.isfile('C:/Users/Harry/PycharmProjects/SpeakEasy/src'):
+        d = pickle.load(open(varfile, 'rb'))
+        df.vars().update(d)
     df.run()
     save(df, varfile)
 
 
 if __name__ == '__main__':
-    openai.api_key_path = utils.OPENAI_API_KEY_PATH
-    load(visits(), 'resources/userLog.pkl')
+    openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
+    load(visits(), 'src/userLog.pkl')
