@@ -10,7 +10,6 @@ from src.utils import MacroGPTJSON, MacroNLG
 import requests
 import random
 
-
 class V(Enum):
     call_names = 0  # str
     favorite_movie = 1  # dict

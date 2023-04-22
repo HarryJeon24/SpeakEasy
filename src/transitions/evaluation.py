@@ -287,7 +287,7 @@ class MacroRecordAudio(Macro):
 
 
         # Specify the directory to save the file
-        SAVE_DIR = "C:/Users/Harry/PycharmProjects/SpeakEasy/src"
+        SAVE_DIR = "/src"
         if not os.path.exists(SAVE_DIR):
             os.makedirs(SAVE_DIR)
 
@@ -347,7 +347,7 @@ class MacroRecordAudio(Macro):
         wf.close()
 
         openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
-        audio_file = open("C:/Users/Harry/PycharmProjects/SpeakEasy/src/USERINPUT.wav", "rb")
+        audio_file = open("/src/USERINPUT.wav", "rb")
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
         text = transcript['text']
         vars['USERINPUT'] = text

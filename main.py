@@ -11,8 +11,6 @@ import random
 from enum import Enum
 from typing import Dict, Any
 import openai
-from emora_stdm import DialogueFlow
-import src.utils
 from src.utils import MacroGPTJSON, MacroNLG
 import pyaudio
 import wave
@@ -20,7 +18,6 @@ from gtts import gTTS
 import threading
 from mutagen.mp3 import MP3
 
-seen_name = False
 
 class V(Enum):
     person_name = 0  # str

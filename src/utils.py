@@ -48,8 +48,9 @@ class MacroGPTJSON(Macro):
 
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         examples = f'{self.full_ex} or {self.empty_ex} if unavailable' if self.empty_ex else self.full_ex
-        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {ngrams.raw_text().strip()}'
+        prompt = f'{self.request} Respond in the JSON schema such as {examples}: {vars["USERINPUT"]}'
         output = gpt_completion(prompt)
+        print(output)
         if not output: return False
 
         try:
