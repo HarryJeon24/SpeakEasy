@@ -350,7 +350,7 @@ class MacroRecordAudio(Macro):
         audio_file = open("C:/Users/Harry/PycharmProjects/SpeakEasy/src/USERINPUT.wav", "rb")
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
         text = transcript['text']
-        a = text
+        vars['USERINPUT'] = text
         if 'ANSWERS' not in vars:
             vars['ANSWERS'] = text.lower()
             vars['SPOKENTIME'] = duration
@@ -359,7 +359,7 @@ class MacroRecordAudio(Macro):
             vars['ANSWERS'] = vars['ANSWERS'] + ' ' + text.lower()
             vars['SPOKENTIME'] = vars['SPOKENTIME'] + duration
             vars['UTTERANCE'] = vars['UTTERANCE'] + 1
-        print("Your Input: ", a)
+        print("Your Input: ", vars['USERINPUT'])
 
         return True
 
