@@ -1,12 +1,9 @@
-import json
 import os.path
 import pickle
 from emora_stdm import DialogueFlow, Macro, Ngrams
-from typing import Dict, Any, List
+from typing import List
 import re
 import time
-import json
-import requests
 import random
 from enum import Enum
 from typing import Dict, Any
@@ -19,7 +16,8 @@ import threading
 from mutagen.mp3 import MP3
 from src.transitions.evaluation import transitions_feedback, transitions_evaluation
 import src.transitions.evaluation as evaluation
-
+from src.transitions.entertainment import transitions_select_topic, transitions_movie, transitions_music, transitions_movie_rec, transitions_music_rec
+import src.transitions.entertainment as ent
 
 class V(Enum):
     person_name = 0  # str
@@ -143,18 +141,19 @@ def visits() -> DialogueFlow:
     travel_transitions = {
         'state': 'travel',
     }
-    entertainment_transitions = {
-        'state': 'entertainment',
-    }
 
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transitions)
     df.load_transitions(health_transitions)
     df.load_transitions(travel_transitions)
-    df.load_transitions(entertainment_transitions)
     df.load_transitions(transitions_feedback)
     df.load_transitions(transitions_evaluation)
     df.load_transitions(travel_transitions)
+    df.load_transitions(transitions_music)
+    df.load_transitions(transitions_movie)
+    df.load_transitions(transitions_select_topic)
+    df.load_transitions(transitions_music_rec)
+    df.load_transitions(transitions_movie_rec)
     df.add_macros(macros)
     return df
 
@@ -304,12 +303,12 @@ class MacroTime(Macro):
 
 class MacroIntroduction(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        # intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
-        #         f'We are going to engage in a few minutes long conversation and I will provide some ' \
-        #         f'feedback on your conversational skills. Whenever the screen displays ' \
-        #         f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
-        #         f'finished. When you see "U:" press enter once again. Before we get started, '
-        intro = "dad"
+        intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
+                f'We are going to engage in a few minutes long conversation and I will provide some ' \
+                f'feedback on your conversational skills. Whenever the screen displays ' \
+                f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
+                f'finished. When you see "U:" press enter once again. Before we get started, '
+        # intro = "dad"
         audio(intro)
 
 
@@ -435,6 +434,7 @@ macros = {
     "ROUTINE": MacroRoutine(),
     "RETURN": MacroReturn(),
 
+    # Introduction
     'TIME': MacroTime(),
     'INTRODUCE': MacroIntroduction(),
     'ASK_NAME': MacroAskName(),
@@ -466,6 +466,90 @@ macros = {
     ),
     'GET_TOPIC': MacroNLG(get_topic),
 
+    # Entertainment
+    'TALK_MOVIE': ent.Macrotalkmovie(),
+    'TALK_MUSIC': ent.Macrotalkmusic(),
+    'FAV_MOVIE': ent.Macrofavmovie(),
+    'GET_MOVIE_PREFERENCE': ent.MacroGetFavMovie(),
+    'GET_MOVIE_PREFERENCE_BOOL': MacroNLG(ent.get_favorite_movie_bool),
+    'SET_MOVIE_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s favorite movie?',
+        {ent.V.favorite_movie.name: "Forrest Gump", ent.V.favorite_movie_bool.name: True},
+        {ent.V.favorite_movie.name: "none", ent.V.favorite_movie_bool.name: False}
+    ),
+    'GET_MOVIE_GENRE_PREFERENCE': ent.MacroGetFavMovieG(),
+    'GET_MOVIE_GENRE_PREFERENCE_BOOL': MacroNLG(ent.get_movie_genre_preference_bool),
+    'SET_MOVIE_GENRE_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s preferred movie genre?',
+        {ent.V.favorite_movie_genre.name: "Action", ent.V.favorite_movie_genre_bool.name: True},
+        {ent.V.favorite_movie_genre.name: "none", ent.V.favorite_movie_genre_bool.name: False}
+    ),
+    'GET_MOVIE_THEME_PREFERENCE': ent.MacroGetFavMovieT(),
+    'GET_MOVIE_THEME_PREFERENCE_BOOL': MacroNLG(ent.get_movie_theme_preference_bool),
+    'SET_MOVIE_THEME_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s movie about? Summarize it in a short sentence or two.',
+        {ent.V.favorite_movie_theme.name: "It is about a dog and a child who love each other.",
+         ent.V.favorite_movie_theme_bool.name: True},
+        {ent.V.favorite_movie_theme.name: "none", ent.V.favorite_movie_theme_bool.name: False}
+    ),
+    'GET_MOVIE_CHARACTER_PREFERENCE': ent.MacroGetFavMovieC(),
+    'GET_MOVIE_CHARACTER_PREFERENCE_BOOL': MacroNLG(ent.get_movie_character_preference_bool),
+    'SET_MOVIE_CHARACTER_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s favorite character?',
+        {ent.V.favorite_movie_character.name: "Hermione Granger", ent.V.favorite_movie_character_bool.name: True},
+        {ent.V.favorite_movie_character.name: "none", ent.V.favorite_movie_character_bool.name: False}
+    ),
+    'THANK_REC': ent.MacroThankRec(),
+    'WHO_FAV_C': ent.MacroWhoC(),
+    'WHAT_FAV_T': ent.MacroWhatT(),
+    'OK': ent.MacroOK(),
+    'GET_MUSIC_PREFERENCE': MacroNLG(ent.get_favorite_music),
+    'GET_MUSIC_PREFERENCE_BOOL': MacroNLG(ent.get_favorite_music_bool),
+    'SET_MUSIC_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s favorite music/song?',
+        {ent.V.favorite_song.name: "Love Story", ent.V.favorite_song_bool.name: True},
+        {ent.V.favorite_song.name: "none", ent.V.favorite_song_bool.name: False}
+    ),
+    'GET_MUSIC_LIKED_ASPECT': MacroNLG(ent.get_music_liked_aspect),
+    'GET_MUSIC_LIKED_ASPECT_BOOL': MacroNLG(ent.get_music_liked_aspect_bool),
+    'SET_MUSIC_LIKED_ASPECT': MacroGPTJSON(
+        'What does the speaker like about the song?',
+        {ent.V.music_liked_aspect.name: "the melody", ent.V.music_liked_aspect_bool.name: True},
+        {ent.V.music_liked_aspect.name: "none", ent.V.music_liked_aspect_bool.name: False}
+    ),
+    'GET_MUSIC_GENRE_PREFERENCE': MacroNLG(ent.get_music_genre_preference),
+    'GET_MUSIC_GENRE_PREFERENCE_BOOL': MacroNLG(ent.get_music_genre_preference_bool),
+    'SET_MUSIC_GENRE_PREFERENCE': MacroGPTJSON(
+        'What is the speaker\'s favorite genre of music?',
+        {ent.V.music_genre_preference.name: "pop", ent.V.music_genre_preference_bool.name: True},
+        {ent.V.music_genre_preference.name: "none", ent.V.music_genre_preference_bool.name: False}
+    ),
+    'GET_MUSIC_THEME_PREFERENCE': MacroNLG(ent.get_music_theme_preference),
+    'GET_MUSIC_THEME_PREFERENCE_BOOL': MacroNLG(ent.get_music_theme_preference_bool),
+    'SET_MUSIC_THEME_PREFERENCE': MacroGPTJSON(
+        'What is the theme of the speaker\'s favorite song?',
+        {ent.V.music_theme_preference.name: "love", ent.V.music_theme_preference_bool.name: True},
+        {ent.V.music_theme_preference.name: "none", ent.V.music_theme_preference_bool.name: False}
+    ),
+    'GET_MUSIC_ARTIST_PREFERENCE': MacroNLG(ent.get_music_artist_preference),
+    'GET_MUSIC_ARTIST_PREFERENCE_BOOL': MacroNLG(ent.get_music_artist_preference_bool),
+    'SET_MUSIC_ARTIST_PREFERENCE': MacroGPTJSON(
+        'Who is the speaker\'s favorite artist for that genre?',
+        {ent.V.music_artist_preference.name: "Taylor Swift", ent.V.music_artist_preference_bool.name: True},
+        {ent.V.music_artist_preference.name: "none", ent.V.music_artist_preference_bool.name: False}
+    ),
+    'GET_USER_ANSWER': MacroNLG(ent.get_user_answer),
+    'SET_USER_ANSWER': MacroGPTJSON(
+        'Does the speaker seem satisfied?',
+        {ent.V.music_artist_preference.name: True},
+        {ent.V.music_artist_preference.name: False}
+    ),
+    'GET_MOVIE': ent.MacroRecommendMovie(),
+    'GET_SONG': ent.MacroRecommendSong(),
+    'SONG_GET_ARTIST': ent.MacroGetSongArtist(),
+    'MOVIE_GET_OVERVIEW': ent.MacroGetMovieOverview(),
+
+    # Evaluation
     'GET_EVAL': MacroNLG(evaluation.get_eval),
     'CONGRATS': evaluation.MacroCongrats(),
     'GPTDETAIL': MacroGPTJSON('Does the user want to know the detail about the feedback? Respond in yes or no.',
@@ -491,7 +575,6 @@ macros = {
     "ACKNOW": evaluation.MacroAcknow(),
     "AWKWARD": evaluation.MacroAwkward(),
     "DETAIL": evaluation.MacroDetail()
-
 }
 
 

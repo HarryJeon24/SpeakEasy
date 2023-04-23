@@ -481,7 +481,7 @@ macros = {
 
 df = DialogueFlow('start', end_state='end')
 df.load_transitions(transitions)
-#df.load_transitions(transitions_feedback)
+df.load_transitions(transitions_feedback)
 df.load_transitions(transitions_evaluation)
 df.add_macros(macros)
 
