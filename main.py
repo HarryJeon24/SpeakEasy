@@ -1,144 +1,180 @@
 import json
 import os.path
 import pickle
-import time
-from typing import Dict, Any, List
-import requests
 from emora_stdm import DialogueFlow, Macro, Ngrams
+from typing import Dict, Any, List
 import re
+import time
+import json
+import requests
+import random
+from enum import Enum
+from typing import Dict, Any
+import openai
+from src.utils import MacroGPTJSON, MacroNLG
 import pyaudio
 import wave
+from gtts import gTTS
+import threading
+from mutagen.mp3 import MP3
+from src.transitions.evaluation import transitions_feedback, transitions_evaluation
+import src.transitions.evaluation as evaluation
 
-transitions = {
-    'state': 'start',
-    '#TIME #WEATHER #ASKNAME': {
-        '[{no, fuck, don, nah, not}] #APPEND': {
-            '`Sorry for asking your name...`': 'end'
-        },
-        '#GetName #APPEND': {
-            '`Hi, ` $NAME`. Nice to meet you. What do you want me to recommend?`': {
-                '[{movie}] #APPEND': {
-                    '': 'movie'
-                },
-                '[{music, song}] #APPEND': {
-                    '': 'music'
+
+class V(Enum):
+    person_name = 0  # str
+    person_feeling = 1  # str
+    implemented_advice = 2  # str
+    activity = 3  # str
+    category = 4  # str
+
+
+def visits() -> DialogueFlow:
+    transitions = {
+        'state': 'start',
+        '#TIME #INTRODUCE #ASK_NAME #USERINPUT #SET_NAME': {
+            '#GET_NAME1': {
+                '`Welcome back,` $NAME `! How have you been?` #RETURN #USERINPUT': {
+                    '#SET_FEELING': {
+                        '#GET_FEELING $RESPONSE="Did you get a chance to work on those speaking tips I gave you last '
+                        'time?" #GTTS #USERINPUT': {
+                            '#SET_LISTENED': {
+                                '#GET_LISTENED #USERINPUT': {
+                                    '#SET_RATING': {
+                                        '$RESPONSE="Thanks for evaluating my feedback! Now, I\'d love to hear more '
+                                        'about you. What have you been up to recently?" #GTTS #USERINPUT': {
+                                            '#SET_TOPIC': {
+                                                '#GET_TOPIC #USERINPUT': {
+                                                    'error': {
+                                                        '`I spend a lot of time` $TOPIC`too. Is it part of your daily '
+                                                        'schedule?` #ROUTINE #USERINPUT': {
+                                                            'error': 'health'
+                                                        }
+                                                    }
+                                                },
+                                                'error': {
+                                                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch '
+                                                    'that." #GTTS': 'end'
+                                                }
+                                            },
+                                            'error': {
+                                                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch '
+                                                'that." #GTTS': 'end'
+                                            }
+                                        },
+                                        'error': {
+                                            '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                            '#GTTS': 'end'
+                                        }
+
+                                    },
+                                    'error': {
+                                        '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                        '#GTTS': 'end'
+                                    }
+                                },
+                                'error': {
+                                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                    '#GTTS': 'end'
+                                }
+                            },
+                            'error': {
+                                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                '#GTTS': 'end'
+                            }
+                        }
+                    },
                 },
                 'error': {
-                    '`Sorry, I cannot make recommendation for this topic.`': 'end'
+                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                 }
-            }
-        },
-        'error': {
-            '`Welcome back, `$NAME `. Did you get to try \"` $REC `\"?`': {
-                'error': {
-                    '`Ok. What else do you want me to recommend?`': {
-                        '[{movie}]': {
-                            '': 'movie'
-                        },
-                        '[{music, song}]': {
-                            '': 'music'
+            },
+            '#GET_NAME2': {
+                # new user
+                '#FIRST_TIME #USERINPUT': {
+                    '#SET_FEELING': {
+                        '#GET_FEELING #UPTO #USERINPUT': {
+                            '#SET_TOPIC': {
+                                '#GET_TOPIC #USERINPUT': {
+                                    'error': {
+                                        '#ROUTINE #USERINPUT': {
+                                            'error': 'feedback'
+                                        },
+                                        'error': {
+                                            '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                            '#GTTS': 'end'
+                                        }
+                                    }
+                                },
+                                'error': {
+                                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
+                                    '#GTTS': 'end'
+                                }
+                            },
+                            'error': {
+                                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
+                            }
                         },
                         'error': {
-                            '`Sorry, I cannot make recommendation for this topic.`': 'end'
+                            '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                         }
+                    },
+                    'error': {
+                        '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                     }
-                }
-            }
-        }
-    }
-}
-
-transitions_music = {
-    'state': 'music',
-    '`How about ` #MUSICREC `?`': {
-        '[{already, <not, like>, another, don, hate, remember, other, nah, no, nope}]': {
-            '`Ok.`': 'music',
-        },
-        '[{what, detail, explain, who, how, where, when, about}]': {
-            '$DETAIL': {
-                '[{already, <not, like>, another, don, hate, remember, other, nah, no, nope}]': {
-                    '`Ok.`': 'music',
                 },
                 'error': {
-                    '`Enjoy.`': 'end'
+                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                 }
+            },
+            'error': {
+                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
             }
         },
         'error': {
-            '`Enjoy.`': 'end'
+            '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
         }
     }
-}
-transitions_movie = {
-    'state': 'movie',
-    '`How about ` #MOVIEREC `?`': {
-        '[{already, <not, like>, another, don, hate, remember, other, nah, no, nope}] #APPEND': {
-            '`Ok.`': 'movie',
-        },
-        '[{what, detail, explain, who, how, where, when, about}] #APPEND':{
-            '$DETAIL': {
-                '[{already, <not, like>, another, don, hate, remember, other, nah, no, nope}]': {
-                    '`Ok.`': 'movie',
-                },
-                'error': {
-                    '`Enjoy.`': 'end'
-                }
-            }
-        },
-        'error': {
-            '`Enjoy.`': 'end'
-        }
+
+    health_transitions = {
+        'state': 'health',
     }
-}
 
-class MacroAppendAns(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        if 'ANSWERS' not in vars:
-            vars['ANSWERS'] = ngrams.raw_text()
-            vars['SPOKENTIME'] = 15
-        else:
-            vars['ANSWERS'] = vars['ANSWERS'] + ' ' + ngrams.raw_text()
-            vars['SPOKENTIME'] += 15
-        return
-class MacroNumQuestions(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        if 'ANSWERS' not in vars:
-            vars['NUMQUEST'] = 0
-        else:
-            vars['NUMQUEST'] = vars['ANSWERS'].count("?")
-        return vars['NUMQUEST']
+    travel_transitions = {
+        'state': 'travel',
+    }
+    entertainment_transitions = {
+        'state': 'entertainment',
+    }
 
-class MacroAVGToken(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        vars['AVGToken'] = len(vars['ANSWERS'])/vars['SPOKENTIME']
-        return vars['AVGTOKEN']
-class MacroTic(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        tokens = vars['ANSWERS'].split()
-        vars['TIC'] = {}
+    df = DialogueFlow('start', end_state='end')
+    df.load_transitions(transitions)
+    df.load_transitions(health_transitions)
+    df.load_transitions(travel_transitions)
+    df.load_transitions(entertainment_transitions)
+    df.load_transitions(transitions_feedback)
+    df.load_transitions(transitions_evaluation)
+    df.load_transitions(travel_transitions)
+    df.add_macros(macros)
+    return df
 
-        for token in tokens:
-            if token in vars['TIC']:
-                vars['TIC'][token] += 1
-            else:
-                vars['TIC'][token] = 1
 
-        return vars['TIC']
-class MacroAcknow(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        if 'ANSWERS' not in vars:
-            return
-        if ngrams.raw_text() in vars['ANSWERS']:
-            vars['ACKNOW'] += 1
-        return vars['ACKNOW']
+def audio(text: str):
+    tts = gTTS(text=text, lang='en')
+    tts.save("bot_output.mp3")
+    os.system("start bot_output.mp3")
+    time.sleep(MP3("bot_output.mp3").info.length)
 
-class MacroAckward(Macro):
+
+# Macro's for audios
+class MacrogTTS(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        AWK = []
-        for tran in AWK:
-            if ngrams.raw_text() in AWK:
-                vars['USEDAWKWARD'] += tran
-        return vars['USEDAWKWARD']
+        if 'BOTLOG' not in vars:
+            vars['BOTLOG'] = vars['RESPONSE']
+        vars['BOTLOG'] = vars['BOTLOG'] + vars['RESPONSE']
+        audio(vars['RESPONSE'])
+        return vars['RESPONSE']
+
 
 class MacroRecordAudio(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
@@ -147,8 +183,14 @@ class MacroRecordAudio(Macro):
         CHANNELS = 1
         RATE = 44100
         CHUNK = 1024
-        RECORD_SECONDS = 5
-        WAVE_OUTPUT_FILENAME = "output.wav"
+
+        # Specify the directory to save the file
+        SAVE_DIR = "/src"
+        if not os.path.exists(SAVE_DIR):
+            os.makedirs(SAVE_DIR)
+
+        # Specify the full path to the WAV file
+        WAVE_OUTPUT_FILENAME = os.path.join(SAVE_DIR, "USERINPUT.wav")
 
         # Create PyAudio object
         audio = pyaudio.PyAudio()
@@ -158,15 +200,36 @@ class MacroRecordAudio(Macro):
                             rate=RATE, input=True,
                             frames_per_buffer=CHUNK)
 
-        print("Recording...")
+        print("Recording... Press Enter to stop")
+
+        # Record start time
+        start_time = time.time()
 
         # Record audio data
         frames = []
-        for i in range(0, int(RATE / CHUNK * RECORD_SECONDS)):
-            data = stream.read(CHUNK)
-            frames.append(data)
+        stop_recording = threading.Event()
 
+        def read_audio_data():
+            while not stop_recording.is_set():
+                data = stream.read(CHUNK)
+                frames.append(data)
+
+        # Start recording thread
+        recording_thread = threading.Thread(target=read_audio_data)
+        recording_thread.start()
+
+        # Wait for user input to stop the recording
+        input()
+
+        # Set event to stop the recording thread
+        stop_recording.set()
+        recording_thread.join()
+        # Record end time
+        end_time = time.time()
         print("Finished recording.")
+
+        # Calculate duration
+        duration = end_time - start_time
 
         # Stop audio stream
         stream.stop_stream()
@@ -181,114 +244,255 @@ class MacroRecordAudio(Macro):
         wf.writeframes(b''.join(frames))
         wf.close()
 
-        return
-class MacroMovieRec(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        vars['REC'] = "NA"
-        if 'GENRE' not in vars or vars['GENRE'] == "fantasy":
-            vars['GENRE'] = "romantic comedy"
-            if vars['REC'] == "About Time":
-                vars['DETAIL'] = "A pair of teenagers with cystic fibrosis meet in a hospital and fall in love, " \
-                                 "though their disease means they must avoid close physical contact."
-                vars['REC'] = "Five Feet Apart"
-            vars['DETAIL'] = "The film is about a young man with the ability to time travel who tries to change his " \
-                             "past in hopes of improving his future"
-            vars['REC'] = "About Time"
+        openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
+        audio_file = open("/src/USERINPUT.wav", "rb")
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        text = transcript['text']
+        vars['USERINPUT'] = text
+        if 'ANSWERS' not in vars:
+            vars['ANSWERS'] = text.lower()
+            vars['SPOKENTIME'] = duration
+            vars['UTTERANCE'] = 1
+        else:
+            vars['ANSWERS'] = vars['ANSWERS'] + ' ' + text.lower()
+            vars['SPOKENTIME'] = vars['SPOKENTIME'] + duration
+            if 'UTTERANCE' not in vars:
+                vars['UTTERANCE'] = 1
+            vars['UTTERANCE'] = vars['UTTERANCE'] + 1
+        print("Your Input: ", vars['USERINPUT'])
 
-        elif vars['GENRE'] == "romantic comedy":
-            vars['GENRE'] = "horror"
-            vars['DETAIL'] = "In 1971, Roger and Carolyn Perron move into a farmhouse in Harrisville, Rhode Island, " \
-                             "with their five daughters. Paranormal events occur within the first few nights."
-            vars['REC'] = "The Conjuring"
-        elif vars['GENRE'] == "horror":
-            vars['GENRE'] = "action"
-            vars['DETAIL'] = "Its story follows John Wick (Keanu Reeves), a legendary hitman who is forced out of " \
-                             "retirement to seek revenge against the men who killed his puppy, a final gift from his " \
-                             "recently deceased wife"
-            vars['REC'] = "John Wick"
-        elif vars['GENRE'] == "action":
-            vars['GENRE'] = "musical"
-            vars['DETAIL'] = "It's a musical that presents the story of Maria, who takes a job as governess to a " \
-                             "large family while she decides whether to become a nun."
-            vars['REC'] = "The Sound of Music"
-        else:
-            vars['GENRE'] = "fantasy"
-            vars['DETAIL'] = "The main story arc concerns Harry's conflict with Lord Voldemort, a dark wizard who " \
-                             "intends to become immortal, overthrow the wizard governing body known as the Ministry " \
-                             "of Magic and subjugate all wizards and Muggles (non-magical people)."
-            vars['REC'] = "Harry Potter"
-        return vars['REC']
-class MacroMusicRec(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        if 'GENRE' not in vars or vars['GENRE'] == "rock":
-            vars['GENRE'] = "children"
-            vars['DETAIL'] = "It's a fun children's song by Parry Gripp."
-            vars['REC'] = "Raining Tacos"
-        elif vars['GENRE'] == "children":
-            vars['GENRE'] = "classic"
-            vars['DETAIL'] = "The first movement was usually in Sonata Form, consisting of three sections, " \
-                             "Exposition, Development and Recapitulation."
-            vars['REC'] = "5th Symphony Beethoven"
-        elif vars['GENRE'] == "classic":
-            vars['GENRE'] = "pop"
-            vars['DETAIL'] = "It's a pop music by Ed Sheeran."
-            vars['REC'] = "Shape of You"
-        else:
-            vars['GENRE'] = "rock"
-            vars['DETAIL'] = "It's a classic rock song by AC/DC."
-            vars['REC'] = "Thunderstruck"
-        return vars['REC']
-class MacroAskName(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        if 'ask_name' not in vars:
-            vars['ask_name'] = "May I have your name?"
-        elif vars['ask_name'] == "May I have your name?" or vars['ask_name'] == "What's your name?":
-            vars['ask_name'] = "What should I call you?"
-        else:
-            vars['ask_name'] = "What's your name?"
-        return vars['ask_name']
+        return True
 
 
-class MacroGetName(Macro):
-    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        r = re.compile(r"(\b\w+\b)\W*$")
-        m = r.search(ngrams.text())
-        if m is None: return False
-        name = m.group(1)
+class MacroFirstTime(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        audio("Hi," + vars["NAME"] + ". Nice to meet you. How are you doing?")
+        return True
 
-        if 'NAME' not in vars or vars['NAME'] != name:
-            vars['NAME'] = name
-            return True
-        else:
-            return False
+
+class MacroRoutine(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        options = ("I also spend a good amount of time" + vars["TOPIC"] + ". Is it part of your everyday routine?",
+                   "I spend alot of time" + vars["TOPIC"] + "too. Is it part of your daily schedule?")
+
+        audio(random.choice(options))
+
+        return True
+
+
+class MacroReturn(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        audio("Welcome back," + vars["NAME"] + "! How have you been?")
+        return True
 
 
 class MacroTime(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        current_time = time.strftime('%H')
-        if current_time < '12':
-            return "Good morning; "
-        elif current_time < '17':
-            return "Good afternoon; "
+        hour = time.strftime("%H")
+
+        if int(hour) < 12:
+            vars["TIME"] = "Good morning!"
+        if 12 < int(hour) < 17:
+            vars["TIME"] = "Good afternoon!"
         else:
-            return "Good evening; "
+            vars["TIME"] = "Good evening!"
+
+        audio(vars["TIME"])
+
+        return vars["TIME"]
 
 
-class MacroWeather(Macro):
+class MacroIntroduction(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        # intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
+        #         f'We are going to engage in a few minutes long conversation and I will provide some ' \
+        #         f'feedback on your conversational skills. Whenever the screen displays ' \
+        #         f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
+        #         f'finished. When you see "U:" press enter once again. Before we get started, '
+        intro = "dad"
+        audio(intro)
+
+
+class MacroAskName(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        url = 'https://api.weather.gov/gridpoints/FFC/52,88/forecast'
-        r = requests.get(url)
-        d = json.loads(r.text)
-        periods = d['properties']['periods']
-        today = periods[0]
-        if today['shortForecast'].__contains__('Sunny'):
-            return "it's sunny today. "
-        elif today['shortForecast'].__contains__('Cloudy'):
-            return "it's cloudy today. "
-        elif today['shortForecast'].__contains__('Shower'):
-            return "it's rainy today. "
+        options = (
+            "What's your name?", "What can I call you?", "Can I have your name?", "What do you call yourself?")
+        vars["ASK_NAME"] = random.choice(options)
+
+        audio(vars["ASK_NAME"])
+
+        return vars["ASK_NAME"]
+
+
+class MacroGetName1(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars[V.person_name.name]
+        vars['NAME'] = name
+
+        usersDict = {}
+        if 'USERS' not in vars:
+            vars['USERS'] = usersDict
+
+        if name in vars['USERS']:
+            vars['NEW_USER'] = False
+            return True
+
+        return False
+
+
+class MacroGetName2(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        name = vars[V.person_name.name]
+        vars['NAME'] = name
+
+        usersDict = {}
+        if 'USERS' not in vars:
+            vars['USERS'] = usersDict
+
+        if name in vars['USERS']:
+            return False
         else:
-            return "it's clear today. "
+            vars['USERS'][name] = []
+            vars['NEW_USER'] = True
+            return True
+
+
+def get_feeling(vars: Dict[str, Any]):
+    feeling = vars[V.person_feeling.name]
+    if feeling == "good":
+        vars["FEELING"] = "I'm happy to hear you are doing well! I'm not so bad myself. "
+    elif feeling == "bad":
+        vars["FEELING"] = "I'm sorry to hear that:( I hope things get better soon."
+    else:
+        vars["FEELING"] = "Glad to hear you are doing okay. I'm doing alright too."
+
+    audio(vars["FEELING"])
+
+    return vars["FEELING"]
+
+
+class MacroWhatHaveYouBeenUpTo(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        output = "What have you been up to?"
+        add_to_log(vars, output)
+        audio(output)
+
+
+def add_to_log(vars: Dict[str, Any], output: str):
+    if 'BOTLOG' not in vars:
+        vars['BOTLOG'] = output
+    vars['BOTLOG'] = vars['BOTLOG'] + output
+
+
+def get_listened(vars: Dict[str, Any]):
+    listened = vars[V.implemented_advice.name]
+    if listened == "yes":
+        a = "I'm glad you were able to practice my tips. How helpful would you say the advice was on a scale of 1 to " \
+            "5 (with 5 being very helpful)?"
+    elif listened == "no":
+        a = "Hopefully you get a chance to practice them going forwards. How helpful do you think my advice was on a" \
+            " scale of 1 to 5 (with 5 being very helpful)?"
+    else:
+        a = "Gotcha. How helpful do you think my advice was on a scale of 1 to 5 (with 5 being very helpful)?"
+
+    audio(a)
+
+    return a
+
+
+class MacroSetRating(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
+        r = re.compile(r"(1|2|3|4|5|one|two|three|four|five|One|Two|Three|Four|Five)")
+        m = r.search(ngrams.raw_text())
+        if m == "1" or "one" or "One":
+            (vars['USERS'])[vars['NAME']].append(1)
+        if m == "2" or "two" or "Two":
+            (vars['USERS'])[vars['NAME']].append(2)
+        if m == "3" or "three" or "Three":
+            (vars['USERS'])[vars['NAME']].append(3)
+        if m == "4" or "four" or "Four":
+            (vars['USERS'])[vars['NAME']].append(4)
+        if m == "5" or "five" or "Five":
+            (vars['USERS'])[vars['NAME']].append(5)
+        return True
+
+
+def get_topic(vars: Dict[str, Any]):
+    topic = vars[V.activity.name]
+    vars['TOPIC'] = topic
+    a = topic + " is excellent. It's nice to keep yourself busy while doing what you enjoy."
+
+    audio(a)
+
+    return a
+
+
+macros = {
+    # Audio
+    "GTTS": MacrogTTS(),
+    "USERINPUT": MacroRecordAudio(),
+    "FIRST_TIME": MacroFirstTime(),
+    "ROUTINE": MacroRoutine(),
+    "RETURN": MacroReturn(),
+
+    'TIME': MacroTime(),
+    'INTRODUCE': MacroIntroduction(),
+    'ASK_NAME': MacroAskName(),
+    'GET_NAME1': MacroGetName1(),
+    'GET_NAME2': MacroGetName2(),
+    'SET_NAME': MacroGPTJSON(
+        'How does the speaker want to be called?',
+        {V.person_name.name: "Mike Johnson"},
+        {V.person_name.name: ""}
+    ),
+    'SET_FEELING': MacroGPTJSON(
+        'Is the speaker doing good, bad, or okay?',
+        {V.person_feeling.name: "good"},
+        {V.person_feeling.name: "bad"}
+    ),
+    'GET_FEELING': MacroNLG(get_feeling),
+    'UPTO': MacroWhatHaveYouBeenUpTo(),
+    'GET_LISTENED': MacroNLG(get_listened),
+    'SET_LISTENED': MacroGPTJSON(
+        'Is the speaker indicating that they took my advice, yes or no?',
+        {V.implemented_advice.name: "yes"},
+        {V.implemented_advice.name: "no"}
+    ),
+    'SET_RATING': MacroSetRating(),
+    'SET_TOPIC': MacroGPTJSON(
+        'What activity has the user been up to',
+        {V.activity.name: "watching sports"},
+        {V.activity.name: "working out"}
+    ),
+    'GET_TOPIC': MacroNLG(get_topic),
+
+    'GET_EVAL': MacroNLG(evaluation.get_eval),
+    'CONGRATS': evaluation.MacroCongrats(),
+    'GPTDETAIL': MacroGPTJSON('Does the user want to know the detail about the feedback? Respond in yes or no.',
+                              {evaluation.V.detail.name: "yes"}),
+    'GPTEFF': MacroGPTJSON(
+        'Considering the user input about the conversation, assign a score: -1 for negative, 0 for neutral, '
+        '1 for positive.', {evaluation.V.effectiveness.name: "0"}),
+    'GPTSAT': MacroGPTJSON(
+        'Considering the user input about the satisfaction of the conversation, assign a score to satisfactiory: -1 for negative, 0 for neutral, '
+        '1 for positive. Do not assign the score to effectiveness.', {evaluation.V.satisfactory.name: "0"}),
+    'GPTCOR': MacroGPTJSON(
+        'Considering the user input about the correctness of the conversation, assign a score to correctness: -1 for negative, 0 for neutral, '
+        '1 for positive. Do not assign score to effectiveness.', {evaluation.V.correctness.name: "0"}),
+    'GPTINT': MacroGPTJSON(
+        'Considering the user input about the interpretability of the conversation, assign a score to interpretability: -1 for negative, 0 for '
+        'neutral, 1 for positive. Do not assign score to effectiveness.', {evaluation.V.interpretability.name: "0"}),
+    'GPTCOH': MacroGPTJSON(
+        'Considering the user input about the coherence of the conversation, assign a score to coherence: -1 for negative, 0 for neutral, '
+        '1 for positive. Do not assign score to effectiveness.', {evaluation.V.coherence.name: "0"}),
+    "QUEST": evaluation.MacroNumQuestions(),
+    "SPEED": evaluation.MacroAVGToken(),
+    "TIC": evaluation.MacroTic(),
+    "ACKNOW": evaluation.MacroAcknow(),
+    "AWKWARD": evaluation.MacroAwkward(),
+    "DETAIL": evaluation.MacroDetail()
+
+}
 
 
 def save(df: DialogueFlow, varfile: str):
@@ -298,29 +502,21 @@ def save(df: DialogueFlow, varfile: str):
 
 
 def load(df: DialogueFlow, varfile: str):
-    if os.path.isfile('C:/Users/Harry/PycharmProjects/SpeakEasy/visits.pkl'):
+    # 'C:/Users/Harry/PycharmProjects/SpeakEasy/src'
+    # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy/src
+    path = f'C:/Users/Harry/PycharmProjects/SpeakEasy/{varfile}'
+    if os.path.isfile(path):
         d = pickle.load(open(varfile, 'rb'))
         df.vars().update(d)
+        df.vars()['ANSWERS'] = ""
+        df.vars()['UTTERANCE'] = 0
+        df.vars()['BOTLOG'] = ""
     df.run()
     save(df, varfile)
 
-macros = {
-    'GetName': MacroGetName(),
-    'TIME': MacroTime(),
-    'WEATHER': MacroWeather(),
-    'ASKNAME': MacroAskName(),
-    "MOVIEREC": MacroMovieRec(),
-    "MUSICREC": MacroMusicRec(),
-    "APPEND": MacroAppendAns()
-}
-
-df = DialogueFlow('start', end_state='end')
-df.load_transitions(transitions)
-df.load_transitions(transitions_music)
-df.load_transitions(transitions_movie)
-# df.knowledge_base().load_json_file('C:/Users/Harry/PycharmProjects/SpeakEasy/ontology')
-df.add_macros(macros)
 
 if __name__ == '__main__':
-    load(df, 'C:/Users/Harry/PycharmProjects/SpeakEasy/visits.pkl')
-
+    # C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt
+    # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/chat_gpt_api_key.txt
+    openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
+    load(visits(), 'src/userLog.pkl')
