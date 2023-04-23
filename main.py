@@ -470,6 +470,7 @@ macros = {
     'TALK_MOVIE': ent.Macrotalkmovie(),
     'TALK_MUSIC': ent.Macrotalkmusic(),
     'FAV_MOVIE': ent.Macrofavmovie(),
+    'FAV_SONG': ent.Macrofavmusic(),
     'GET_MOVIE_PREFERENCE': ent.MacroGetFavMovie(),
     'GET_MOVIE_PREFERENCE_BOOL': MacroNLG(ent.get_favorite_movie_bool),
     'SET_MOVIE_PREFERENCE': MacroGPTJSON(
@@ -503,41 +504,45 @@ macros = {
     'WHO_FAV_C': ent.MacroWhoC(),
     'WHAT_FAV_T': ent.MacroWhatT(),
     'OK': ent.MacroOK(),
-    'GET_MUSIC_PREFERENCE': MacroNLG(ent.get_favorite_music),
+    'GET_MUSIC_PREFERENCE': ent.MacroGetFavMusic(),
     'GET_MUSIC_PREFERENCE_BOOL': MacroNLG(ent.get_favorite_music_bool),
     'SET_MUSIC_PREFERENCE': MacroGPTJSON(
         'What is the speaker\'s favorite music/song?',
         {ent.V.favorite_song.name: "Love Story", ent.V.favorite_song_bool.name: True},
         {ent.V.favorite_song.name: "none", ent.V.favorite_song_bool.name: False}
     ),
-    'GET_MUSIC_LIKED_ASPECT': MacroNLG(ent.get_music_liked_aspect),
+    'GET_MUSIC_LIKED_ASPECT': ent.MacroGetMusicA(),
     'GET_MUSIC_LIKED_ASPECT_BOOL': MacroNLG(ent.get_music_liked_aspect_bool),
     'SET_MUSIC_LIKED_ASPECT': MacroGPTJSON(
         'What does the speaker like about the song?',
         {ent.V.music_liked_aspect.name: "the melody", ent.V.music_liked_aspect_bool.name: True},
         {ent.V.music_liked_aspect.name: "none", ent.V.music_liked_aspect_bool.name: False}
     ),
-    'GET_MUSIC_GENRE_PREFERENCE': MacroNLG(ent.get_music_genre_preference),
+    'GET_MUSIC_GENRE_PREFERENCE': ent.MacroGetMusicG(),
     'GET_MUSIC_GENRE_PREFERENCE_BOOL': MacroNLG(ent.get_music_genre_preference_bool),
     'SET_MUSIC_GENRE_PREFERENCE': MacroGPTJSON(
         'What is the speaker\'s favorite genre of music?',
         {ent.V.music_genre_preference.name: "pop", ent.V.music_genre_preference_bool.name: True},
         {ent.V.music_genre_preference.name: "none", ent.V.music_genre_preference_bool.name: False}
     ),
-    'GET_MUSIC_THEME_PREFERENCE': MacroNLG(ent.get_music_theme_preference),
+    'GET_MUSIC_THEME_PREFERENCE': ent.MacroGetMusicT(),
     'GET_MUSIC_THEME_PREFERENCE_BOOL': MacroNLG(ent.get_music_theme_preference_bool),
     'SET_MUSIC_THEME_PREFERENCE': MacroGPTJSON(
         'What is the theme of the speaker\'s favorite song?',
         {ent.V.music_theme_preference.name: "love", ent.V.music_theme_preference_bool.name: True},
         {ent.V.music_theme_preference.name: "none", ent.V.music_theme_preference_bool.name: False}
     ),
-    'GET_MUSIC_ARTIST_PREFERENCE': MacroNLG(ent.get_music_artist_preference),
+    'GET_MUSIC_ARTIST_PREFERENCE': ent.MacroGetMusicAr(),
     'GET_MUSIC_ARTIST_PREFERENCE_BOOL': MacroNLG(ent.get_music_artist_preference_bool),
     'SET_MUSIC_ARTIST_PREFERENCE': MacroGPTJSON(
         'Who is the speaker\'s favorite artist for that genre?',
         {ent.V.music_artist_preference.name: "Taylor Swift", ent.V.music_artist_preference_bool.name: True},
         {ent.V.music_artist_preference.name: "none", ent.V.music_artist_preference_bool.name: False}
     ),
+    'THANK_REC2': ent.MacroThankRec2(),
+    'WHO_FAV': ent.MacroWhoFav(),
+    'MORE_T': ent.MacroMoreT(),
+    'WHAT_G': ent.MacroWhatG(),
     'GET_USER_ANSWER': MacroNLG(ent.get_user_answer),
     'SET_USER_ANSWER': MacroGPTJSON(
         'Does the speaker seem satisfied?',
@@ -545,6 +550,7 @@ macros = {
         {ent.V.music_artist_preference.name: False}
     ),
     'GET_MOVIE': ent.MacroRecommendMovie(),
+    'ANOTHER': ent.MacroAnother(),
     'GET_SONG': ent.MacroRecommendSong(),
     'SONG_GET_ARTIST': ent.MacroGetSongArtist(),
     'MOVIE_GET_OVERVIEW': ent.MacroGetMovieOverview(),

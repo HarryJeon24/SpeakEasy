@@ -58,6 +58,14 @@ class Macrofavmovie(Macro):
         return output
 
 
+class Macrofavmusic(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "What is your favorite song?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
 class MacroRecommendMovie(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         api_key = 'e99e2a85cdf530f4446d8f3654b7c853'
@@ -83,7 +91,13 @@ class MacroRecommendMovie(Macro):
         if user_name in vars:
             vars[user_name]['recommendations'].append(recommendation)
         vars['favorite_movie'] = recommendation
-        return title
+
+        # audio
+        output = "How about " + title + "? It is about " + overview
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+
+        return output
 
 
 class MacroGetMovieOverview(Macro):
@@ -128,7 +142,13 @@ class MacroRecommendSong(Macro):
         if user_name in vars:
             vars[user_name]['recommendations'].append(recommendation)
         vars['favorite_song'] = recommendation
-        return track_name
+
+        # audio
+        output = "How about " + track_name + " by " + artist_name + "?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+
+        return output
 
 
 class MacroGetSongArtist(Macro):
@@ -220,44 +240,109 @@ class MacroOK(Macro):
         return output
 
 
-def get_favorite_music(vars: Dict[str, Any]):
-    return vars[V.favorite_song.name]
+class MacroGetFavMusic(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Oh, " + str(vars[V.favorite_song.name]) + " is such a good song. What do you like about it?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_favorite_music_bool(vars: Dict[str, Any]):
     return vars[V.favorite_song_bool.name]
 
 
-def get_music_liked_aspect(vars: Dict[str, Any]):
-    return vars.get(V.music_liked_aspect.name)
+class MacroGetMusicA(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Interesting! I can see why you like " + str(vars[V.favorite_song.name]) +\
+                 " in the song. What genre is " + str(vars[V.favorite_song.name]) + " from?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_music_liked_aspect_bool(vars: Dict[str, Any]):
     return vars.get(V.music_liked_aspect_bool.name)
 
 
-def get_music_genre_preference(vars: Dict[str, Any]):
-    return vars.get(V.music_genre_preference.name)
+class MacroGetMusicG(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Oh, I also enjoy " + str(vars.get(V.music_genre_preference.name)) +\
+                 " music. Can you tell me more about the theme of " + str(vars[V.favorite_song.name]) + "?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_music_genre_preference_bool(vars: Dict[str, Any]):
     return vars.get(V.music_genre_preference_bool.name)
 
 
-def get_music_theme_preference(vars: Dict[str, Any]):
-    return vars.get(V.music_theme_preference.name)
+class MacroGetMusicT(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "That\'s really cool. So, the theme of " + str(vars[V.favorite_song.name]) +\
+                 " is " + str(vars.get(V.music_theme_preference.name)) + \
+                 ". Who is your favorite artist for that type of music?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_music_theme_preference_bool(vars: Dict[str, Any]):
     return vars.get(V.music_theme_preference_bool.name)
 
 
-def get_music_artist_preference(vars: Dict[str, Any]):
-    return vars.get(V.music_artist_preference.name)
+class MacroGetMusicAr(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Great choice! I love " + str(vars.get(V.music_artist_preference.name)) +\
+                 " too. Can you tell me more about their music?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_music_artist_preference_bool(vars: Dict[str, Any]):
     return vars.get(V.music_artist_preference_bool.name)
+
+
+class MacroThankRec2(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Thank you for sharing! Now, I want to recommend you a song!"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroWhoFav(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Who is your favorite artist for that type of music?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroMoreT(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Ok! Can you tell me more about the theme of " + str(vars[V.favorite_song.name]) + "?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroWhatG(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "What genre is " + str(vars[V.favorite_song.name]) + " from?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroAnother(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Ok, then let\'s find another one."
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_call_name(vars: Dict[str, Any]):
@@ -334,10 +419,10 @@ transitions_movie = {
 
 transitions_movie_rec = {
     'state': 'movie_rec',
-    '`How about "` #GET_MOVIE `"?`': {
+    '#GET_MOVIE #USERINPUT': {
         '#SET_USER_ANSWER': {
-            '#IF(#GET_USER_ANSWER)`Great!`': 'select_topic',
-            '`Ok, then let\'s find another movie.`': {
+            '#IF(#GET_USER_ANSWER) #OK': 'select_topic',
+            '#ANOTHER': {
                 'state': 'movie_rec',
                 'score': 0.1
             }
@@ -347,57 +432,49 @@ transitions_movie_rec = {
 
 transitions_music = {
     'state': 'music',
-    '`What is your favorite song?`': {
+    '#FAV_SONG #USERINPUT': {
         '#SET_MUSIC_PREFERENCE': {
-            '#IF(#GET_MUSIC_PREFERENCE_BOOL) `Oh, ` #GET_MUSIC_PREFERENCE `is such a good song. What do you like '
-            'about it?`': {
+            '#IF(#GET_MUSIC_PREFERENCE_BOOL) #GET_MUSIC_PREFERENCE #USERINPUT': {
                 '#SET_MUSIC_LIKED_ASPECT': {
-                    '#IF(#GET_MUSIC_LIKED_ASPECT_BOOL) `Interesting! I can see why you like ` '
-                    '#GET_MUSIC_LIKED_ASPECT `in the song. What genre is` #GET_MUSIC_PREFERENCE `from?`': {
+                    '#IF(#GET_MUSIC_LIKED_ASPECT_BOOL) #GET_MUSIC_LIKED_ASPECT #USERINPUT': {
                         'state': 'genre',
                         '#SET_MUSIC_GENRE_PREFERENCE': {
-                            '#IF(#GET_MUSIC_GENRE_PREFERENCE_BOOL) `Oh, I also enjoy ` '
-                            '#GET_MUSIC_GENRE_PREFERENCE `music. Can you tell me more about the theme of` '
-                            '#GET_MUSIC_PREFERENCE `?`': {
+                            '#IF(#GET_MUSIC_GENRE_PREFERENCE_BOOL) #GET_MUSIC_GENRE_PREFERENCE #USERINPUT': {
                                 'state': 'music_pref',
                                 '#SET_MUSIC_THEME_PREFERENCE': {
-                                    '#IF(#GET_MUSIC_THEME_PREFERENCE_BOOL) `That\'s really cool. So, the theme '
-                                    'of` #GET_MUSIC_PREFERENCE `is` #GET_MUSIC_THEME_PREFERENCE `. Who is your '
-                                    'favorite artist for that type of music?`': {
+                                    '#IF(#GET_MUSIC_THEME_PREFERENCE_BOOL) #GET_MUSIC_THEME_PREFERENCE #USERINPUT': {
                                         'state': 'artist',
                                         '#SET_MUSIC_ARTIST_PREFERENCE': {
-                                            '#IF(#GET_MUSIC_ARTIST_PREFERENCE_BOOL) `Great choice! I love ` '
-                                            '#GET_MUSIC_ARTIST_PREFERENCE `too. Can you tell me more about their '
-                                            'music?`': {
+                                            '#IF(#GET_MUSIC_ARTIST_PREFERENCE_BOOL) #GET_MUSIC_ARTIST_PREFERENCE #USERINPUT': {
                                                 'error': {
-                                                    '`Thank you for sharing! Now, I want to recommend you a song!`': 'music_rec',
+                                                    '#THANK_REC2': 'music_rec',
                                                 }
                                             },
-                                            '`Thank you for sharing! Now, I want to recommend you a song!`': {
+                                            '#THANK_REC2': {
                                                 'state': 'music_rec',
                                                 'score': 0.1
                                             }
                                         }
                                     },
-                                    '`Who is your favorite artist for that type of music?`': {
+                                    '#WHO_FAV #USERINPUT': {
                                         'state': 'artist',
                                         'score': 0.1
                                     }
                                 }
                             },
-                            '`Ok! Can you tell me more about the theme of` #GET_MUSIC_PREFERENCE `?`': {
+                            '#MORE_T #USERINPUT': {
                                 'state': 'music_pref',
                                 'score': 0.1
                             }
                         }
                     },
-                    '`What genre is` #GET_MUSIC_PREFERENCE `from?`': {
+                    '#WHAT_G #USERINPUT': {
                         'state': 'genre',
                         'score': 0.1
                     }
                 }
             },
-            '`Ok!`': {
+            '#OK': {
                 'state': 'select_topic',
                 'score': 0.1
             }
@@ -407,10 +484,10 @@ transitions_music = {
 
 transitions_music_rec = {
     'state': 'music_rec',
-    '`How about "` #GET_SONG `"?`': {
+    '#GET_SONG #USERINPUT': {
         '#SET_USER_ANSWER': {
-            '#IF(#GET_USER_ANSWER)`Great!`': 'select_topic',
-            '`Ok, then let\'s find another song.`': {
+            '#IF(#GET_USER_ANSWER) #OK': 'select_topic',
+            '#ANOTHER': {
                 'state': 'music_rec',
                 'score': 0.1
             }
