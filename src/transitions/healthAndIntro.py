@@ -101,11 +101,11 @@ def visits() -> DialogueFlow:
                         },
                         '`I know alot of people struggle with getting physical activity in, especially during busy school weeks. Have you tried finding a workout buddy to help you stay motivated?`': {
                             'score': 0.1,
-                            '#SET_EXERCISE #GET_EXERCISE': {
+                            '#SET_BUDDY #GET_BUDDY': {
                                 '#IF($BUDDY) `That\'s really nice. The best part about working out with friends is grabbing a bite to eat after!`': {
                                     'error': 'food'
                                 },
-                                '`Aww I get it, its hard to find people with the same interests as you. Sometimes, when I don\'t feel like going to the gym I motivate myself by grabbing a bite to eat afterwards.`': {
+                                '`I get it, its hard to find people with the same interests as you. Sometimes, when I don\'t feel like going to the gym I motivate myself by grabbing a bite to eat afterwards.`': {
                                     'score': 0.1,
                                     'error': 'food'
                                 }
@@ -277,7 +277,6 @@ class MacroSetRating(Macro):
 
 def get_lifestyle(vars: Dict[str, Any]):
     healthy = vars[V.healthy.name]
-    print(healthy)
     vars['HEALTHY'] = False
     if healthy == "yes":
         vars['HEALTHY'] = True
@@ -303,7 +302,7 @@ def get_buddy(vars: Dict[str, Any]):
 def get_balance(vars: Dict[str, Any]):
     balance = vars[V.balance.name]
     vars['BALANCE'] = balance
-    if balance == "none":
+    if balance == "none" or balance == "not sure" or balance == "n/a" or balance == "nothing":
         return "I hear you. I usually struggle with getting enough sleep, but the key is to put your health first. Everything else comes second."
     return balance + " can be very difficult. I struggle with that too. The key is to put your health first no matter what. Everything else comes second."
 
@@ -370,7 +369,7 @@ macros = {
     ),
     'GET_EXERCISE': MacroNLG(get_exercise),
     'SET_BUDDY': MacroGPTJSON(
-        'Is the speaker indicating that they have a workout buddy, yes or no?',
+        'Is the speaker indicating that they have friends, yes or no?',
         {V.buddy.name: "yes"},
         {V.buddy.name: "no"}
     ),
