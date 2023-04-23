@@ -10,17 +10,28 @@ from src.utils import MacroGPTJSON, MacroNLG
 import requests
 import random
 
+
 class V(Enum):
     call_names = 0  # str
     favorite_movie = 1  # dict
-    favorite_movie_genre = 2  # str
-    favorite_movie_theme = 3  # str
-    favorite_movie_character = 4  # str
-    favorite_song = 5  # dict
-    music_liked_aspect = 6  # str
-    music_genre_preference = 7  # str
-    music_theme_preference = 8  # str
-    music_artist_preference = 9  # str
+    favorite_movie_bool = 2  # bool
+    favorite_movie_genre = 3  # str
+    favorite_movie_genre_bool = 4  # bool
+    favorite_movie_theme = 5  # str
+    favorite_movie_theme_bool = 6  # bool
+    favorite_movie_character = 7  # str
+    favorite_movie_character_bool = 8  # bool
+    favorite_song = 9  # dict
+    favorite_song_bool = 10  # bool
+    music_liked_aspect = 11  # str
+    music_liked_aspect_bool = 12  # bool
+    music_genre_preference = 13  # str
+    music_genre_preference_bool = 14  # bool
+    music_theme_preference = 15  # str
+    music_theme_preference_bool = 16  # bool
+    music_artist_preference = 17  # str
+    music_artist_preference_bool = 18  # bool
+    user_answer = 19  # bool
 
 
 class MacroRecommendMovie(Macro):
@@ -125,36 +136,47 @@ def main() -> DialogueFlow:
 
     transitions_movie = {
         'state': 'movie',
-        '`Do you have a favorite movie?`': {
-            '[{yes, of course, sure, definitely}]': {
-                '`Amazing! What is your favorite movie?`': {
-                    '#SET_MOVIE_PREFERENCE': {
-                        'state': 'movie_talk',
-                        '`Oh, ` #GET_MOVIE_PREFERENCE `sounds interesting! What genre is it?`': {
-                            '#SET_MOVIE_GENRE_PREFERENCE': {
-                                '`Oh, I also like` #GET_MOVIE_GENRE_PREFERENCE `movies. Can you tell me about the '
-                                'theme of your favorite movie?`': {
-                                    '#SET_MOVIE_THEME_PREFERENCE': {
-                                        '`Interesting! So, the theme of your favorite movie is` '
-                                        '#GET_MOVIE_THEME_PREFERENCE ` Who is your favorite character in that '
-                                        'movie?`': {
-                                            '#SET_MOVIE_CHARACTER_PREFERENCE': {
-                                                '`Ok! Can you tell me more about` #GET_MOVIE_CHARACTER_PREFERENCE ` ?`': {
-                                                    'error': {
-                                                        '`Thank you for sharing! Now, I want to recommend you a movie!`': 'movie_rec',
-                                                    }
-                                                }
+        '`What is your favorite movie?`': {
+            '#SET_MOVIE_PREFERENCE': {
+                '#IF(#GET_MOVIE_PREFERENCE_BOOL) `Oh, ` #GET_MOVIE_PREFERENCE `sounds interesting! What genre is it?`': {
+                    '#SET_MOVIE_GENRE_PREFERENCE': {
+                        '#IF(#GET_MOVIE_GENRE_PREFERENCE_BOOL) `Oh, I also like` #GET_MOVIE_GENRE_PREFERENCE `movies. '
+                        'Can you tell me about the theme of your favorite movie?`': {
+                            'state': 'movie_theme',
+                            '#SET_MOVIE_THEME_PREFERENCE': {
+                                '#IF(#GET_MOVIE_THEME_PREFERENCE_BOOL) `So, the theme of your favorite movie is` '
+                                '#GET_MOVIE_THEME_PREFERENCE ` Who is your favorite character in that '
+                                'movie?`': {
+                                    'state': 'movie_character',
+                                    '#SET_MOVIE_CHARACTER_PREFERENCE': {
+                                        '#IF(#GET_MOVIE_CHARACTER_PREFERENCE_BOOL) `Ok! Can you tell me more about` '
+                                        '#GET_MOVIE_CHARACTER_PREFERENCE ` ?`': {
+                                            'error': {
+                                                '`Thank you for sharing! Now, I want to recommend you a movie!`': 'movie_rec',
                                             }
+                                        },
+                                        '`Thank you for sharing! Now, I want to recommend you a movie!`': {
+                                            'state': 'movie_rec',
+                                            'score': 0.1
                                         }
                                     }
+                                },
+                                '`Ok! Who is your favorite character in the movie?`': {
+                                    'state': 'movie_character',
+                                    'score': 0.1
                                 }
                             }
+                        },
+                        '`Ok! Can you tell me about the theme of your favorite movie?`': {
+                            'state': 'movie_theme',
+                            'score': 0.1
                         }
                     }
+                },
+                '`Ok!`': {
+                    'state': 'select_topic',
+                    'score': 0.1
                 }
-            },
-            'error': {
-                '`Oh, let\'s find you a movie then!`': 'movie_rec'
             }
         }
     }
@@ -162,24 +184,11 @@ def main() -> DialogueFlow:
     transitions_movie_rec = {
         'state': 'movie_rec',
         '`How about "` #GET_MOVIE `"?`': {
-            '<{another, already}, {film, movie}>': 'movie_rec',
-            '[{theme, topic, about, summary, synopsis}]': {
-                '`Here is a brief overview: `#MOVIE_GET_OVERVIEW': {
-                    '<{another, already}, {film, movie}>': 'movie_rec',
-                    'error': {
-                        '`Enjoy!`': 'select_topic'
-                    }
-                }
-            },
-            '[{great, thanks, ok, perfect, amazing}]': {
-                '`Enjoy!`': 'select_topic'
-            },
-            'error': {
-                '`Sorry, I don\'t understand that. Do you want another movie recommendation?`': {
-                    '[{yes, ok, sure}]': 'movie_rec',
-                    'error': {
-                        '`Ok!`': 'select_topic'
-                    }
+            '#SET_USER_ANSWER': {
+                '#IF(#GET_USER_ANSWER)`Great!`': 'select_topic',
+                '`Ok, then let\'s find another song.`': {
+                    'state': 'movie_rec',
+                    'score': 0.1
                 }
             }
         }
@@ -187,42 +196,60 @@ def main() -> DialogueFlow:
 
     transitions_music = {
         'state': 'music',
-        '`Do you have a favorite song?`': {
-            '[{yes, of course, sure, definitely}]': {
-                '`Amazing! What is your favorite song?`': {
-                    '#SET_MUSIC_PREFERENCE': {
-                        'state': 'music_talk',
-                        '`Oh, ` #GET_MUSIC_PREFERENCE `is such a good song. What do you like about it?`': {
-                            '#SET_MUSIC_LIKED_ASPECT': {
-                                '`Interesting! I can see why you like ` #GET_MUSIC_LIKED_ASPECT `in the song. '
-                                'What genre is` #GET_MUSIC_PREFERENCE `from?`': {
-                                    '#SET_MUSIC_GENRE_PREFERENCE': {
-                                        '`Oh, I also enjoy ` #GET_MUSIC_GENRE_PREFERENCE `music. Can you tell me '
-                                        'more about the theme of` #GET_MUSIC_PREFERENCE `?`': {
-                                            '#SET_MUSIC_THEME_PREFERENCE': {
-                                                '`That\'s really cool. So, the theme of` #GET_MUSIC_PREFERENCE `is` '
-                                                '#GET_MUSIC_THEME_PREFERENCE `. Who is your favorite artist for '
-                                                'that genre?`': {
-                                                    '#SET_MUSIC_ARTIST_PREFERENCE': {
-                                                        '`Great choice! I love ` #GET_MUSIC_ARTIST_PREFERENCE `too. '
-                                                        'Can you tell me more about their music?`': {
-                                                            'error': {
-                                                                '`Thank you for sharing! Now, I want to recommend you a song!`': 'music_rec',
-                                                            }
-                                                        }
+        '`What is your favorite song?`': {
+            '#SET_MUSIC_PREFERENCE': {
+                '#IF(#GET_MUSIC_PREFERENCE_BOOL) `Oh, ` #GET_MUSIC_PREFERENCE `is such a good song. What do you like '
+                'about it?`': {
+                    '#SET_MUSIC_LIKED_ASPECT': {
+                        '#IF(#GET_MUSIC_LIKED_ASPECT_BOOL) `Interesting! I can see why you like ` '
+                        '#GET_MUSIC_LIKED_ASPECT `in the song. What genre is` #GET_MUSIC_PREFERENCE `from?`': {
+                            'state': 'genre',
+                            '#SET_MUSIC_GENRE_PREFERENCE': {
+                                '#IF(#GET_MUSIC_GENRE_PREFERENCE_BOOL) `Oh, I also enjoy ` '
+                                '#GET_MUSIC_GENRE_PREFERENCE `music. Can you tell me more about the theme of` '
+                                '#GET_MUSIC_PREFERENCE `?`': {
+                                    'state': 'music_pref',
+                                    '#SET_MUSIC_THEME_PREFERENCE': {
+                                        '#IF(#GET_MUSIC_THEME_PREFERENCE_BOOL) `That\'s really cool. So, the theme '
+                                        'of` #GET_MUSIC_PREFERENCE `is` #GET_MUSIC_THEME_PREFERENCE `. Who is your '
+                                        'favorite artist for that type of music?`': {
+                                            'state': 'artist',
+                                            '#SET_MUSIC_ARTIST_PREFERENCE': {
+                                                '#IF(#GET_MUSIC_ARTIST_PREFERENCE_BOOL) `Great choice! I love ` '
+                                                '#GET_MUSIC_ARTIST_PREFERENCE `too. Can you tell me more about their '
+                                                'music?`': {
+                                                    'error': {
+                                                        '`Thank you for sharing! Now, I want to recommend you a song!`': 'music_rec',
                                                     }
+                                                },
+                                                '`Thank you for sharing! Now, I want to recommend you a song!`': {
+                                                    'state': 'music_rec',
+                                                    'score': 0.1
                                                 }
                                             }
+                                        },
+                                        '`Who is your favorite artist for that type of music?`': {
+                                            'state': 'artist',
+                                            'score': 0.1
                                         }
                                     }
+                                },
+                                '`Ok! Can you tell me more about the theme of` #GET_MUSIC_PREFERENCE `?`': {
+                                    'state': 'music_pref',
+                                    'score': 0.1
                                 }
                             }
+                        },
+                        '`What genre is` #GET_MUSIC_PREFERENCE `from?`': {
+                            'state': 'genre',
+                            'score': 0.1
                         }
                     }
+                },
+                '`Ok!`': {
+                    'state': 'select_topic',
+                    'score': 0.1
                 }
-            },
-            'error': {
-                '`Oh, let\'s find you a recommendation then!`': 'music_rec'
             }
         }
     }
@@ -230,24 +257,11 @@ def main() -> DialogueFlow:
     transitions_music_rec = {
         'state': 'music_rec',
         '`How about "` #GET_SONG `"?`': {
-            '<{another, already}, {song, music}>': 'music_rec',
-            '[{artist, singer, who}]': {
-                '`The song\'s artist is `#SONG_GET_ARTIST`.`': {
-                    '<{another, already}, {song, music}>': 'music_rec',
-                    'error': {
-                        '`Enjoy!`': 'select_topic'
-                    }
-                }
-            },
-            '[{great, thanks, ok, perfect, amazing}]': {
-                '`Enjoy!`': 'select_topic'
-            },
-            'error': {
-                '`Sorry, I don\'t understand that. Do you want another music recommendation?`': {
-                    '[{yes, ok, sure}]': 'music_rec',
-                    'error': {
-                        '`Ok!`': 'select_topic'
-                    }
+            '#SET_USER_ANSWER': {
+                '#IF(#GET_USER_ANSWER)`Great!`': 'select_topic',
+                '`Ok, then let\'s find another song.`': {
+                    'state': 'music_rec',
+                    'score': 0.1
                 }
             }
         }
@@ -259,58 +273,74 @@ def main() -> DialogueFlow:
             'How does the speaker want to be called?',
             {V.call_names.name: ["Mike", "Michael"]}),
         'GET_MOVIE_PREFERENCE': MacroNLG(get_favorite_movie),
+        'GET_MOVIE_PREFERENCE_BOOL': MacroNLG(get_favorite_movie_bool),
         'SET_MOVIE_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s favorite movie?',
-            {V.favorite_movie.name: "Forrest Gump"},
-            {V.favorite_movie.name: "that movie"}
+            {V.favorite_movie.name: "Forrest Gump", V.favorite_movie_bool.name: True},
+            {V.favorite_movie.name: "none", V.favorite_movie_bool.name: False}
         ),
         'GET_MOVIE_GENRE_PREFERENCE': MacroNLG(get_movie_genre_preference),
+        'GET_MOVIE_GENRE_PREFERENCE_BOOL': MacroNLG(get_movie_genre_preference_bool),
         'SET_MOVIE_GENRE_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s preferred movie genre?',
-            {V.favorite_movie_genre.name: "Action"},
-            {V.favorite_movie_genre.name: "that genre"}
+            {V.favorite_movie_genre.name: "Action", V.favorite_movie_genre_bool.name: True},
+            {V.favorite_movie_genre.name: "none", V.favorite_movie_genre_bool.name: False}
         ),
         'GET_MOVIE_THEME_PREFERENCE': MacroNLG(get_movie_theme_preference),
+        'GET_MOVIE_THEME_PREFERENCE_BOOL': MacroNLG(get_movie_theme_preference_bool),
         'SET_MOVIE_THEME_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s movie about? Summarize it in a short sentence or two.',
-            {V.favorite_movie_theme.name: "It is about a dog and a child who love each other."},
-            {V.favorite_movie_theme.name: "something"}
+            {V.favorite_movie_theme.name: "It is about a dog and a child who love each other.",
+             V.favorite_movie_theme_bool.name: True},
+            {V.favorite_movie_theme.name: "none", V.favorite_movie_theme_bool.name: False}
         ),
         'GET_MOVIE_CHARACTER_PREFERENCE': MacroNLG(get_movie_character_preference),
+        'GET_MOVIE_CHARACTER_PREFERENCE_BOOL': MacroNLG(get_movie_character_preference_bool),
         'SET_MOVIE_CHARACTER_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s favorite character?',
-            {V.favorite_movie_character.name: "Hermione Granger"},
-            {V.favorite_movie_character.name: "that character"}
+            {V.favorite_movie_character.name: "Hermione Granger", V.favorite_movie_character_bool.name: True},
+            {V.favorite_movie_character.name: "none", V.favorite_movie_character_bool.name: False}
         ),
         'GET_MUSIC_PREFERENCE': MacroNLG(get_favorite_music),
+        'GET_MUSIC_PREFERENCE_BOOL': MacroNLG(get_favorite_music_bool),
         'SET_MUSIC_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s favorite music/song?',
-            {V.favorite_song.name: "Love Story"},
-            {V.favorite_song.name: "N/A"}
+            {V.favorite_song.name: "Love Story", V.favorite_song_bool.name: True},
+            {V.favorite_song.name: "none", V.favorite_song_bool.name: False}
         ),
         'GET_MUSIC_LIKED_ASPECT': MacroNLG(get_music_liked_aspect),
+        'GET_MUSIC_LIKED_ASPECT_BOOL': MacroNLG(get_music_liked_aspect_bool),
         'SET_MUSIC_LIKED_ASPECT': MacroGPTJSON(
             'What does the speaker like about the song?',
-            {V.music_liked_aspect.name: "the melody"},
-            {V.music_liked_aspect.name: "N/A"}
+            {V.music_liked_aspect.name: "the melody", V.music_liked_aspect_bool.name: True},
+            {V.music_liked_aspect.name: "none", V.music_liked_aspect_bool.name: False}
         ),
         'GET_MUSIC_GENRE_PREFERENCE': MacroNLG(get_music_genre_preference),
+        'GET_MUSIC_GENRE_PREFERENCE_BOOL': MacroNLG(get_music_genre_preference_bool),
         'SET_MUSIC_GENRE_PREFERENCE': MacroGPTJSON(
             'What is the speaker\'s favorite genre of music?',
-            {V.music_genre_preference.name: "pop"},
-            {V.music_genre_preference.name: "N/A"}
+            {V.music_genre_preference.name: "pop", V.music_genre_preference_bool.name: True},
+            {V.music_genre_preference.name: "none", V.music_genre_preference_bool.name: False}
         ),
         'GET_MUSIC_THEME_PREFERENCE': MacroNLG(get_music_theme_preference),
+        'GET_MUSIC_THEME_PREFERENCE_BOOL': MacroNLG(get_music_theme_preference_bool),
         'SET_MUSIC_THEME_PREFERENCE': MacroGPTJSON(
             'What is the theme of the speaker\'s favorite song?',
-            {V.music_theme_preference.name: "love"},
-            {V.music_theme_preference.name: "N/A"}
+            {V.music_theme_preference.name: "love", V.music_theme_preference_bool.name: True},
+            {V.music_theme_preference.name: "none", V.music_theme_preference_bool.name: False}
         ),
         'GET_MUSIC_ARTIST_PREFERENCE': MacroNLG(get_music_artist_preference),
+        'GET_MUSIC_ARTIST_PREFERENCE_BOOL': MacroNLG(get_music_artist_preference_bool),
         'SET_MUSIC_ARTIST_PREFERENCE': MacroGPTJSON(
             'Who is the speaker\'s favorite artist for that genre?',
-            {V.music_artist_preference.name: "Taylor Swift"},
-            {V.music_artist_preference.name: "N/A"}
+            {V.music_artist_preference.name: "Taylor Swift", V.music_artist_preference_bool.name: True},
+            {V.music_artist_preference.name: "none", V.music_artist_preference_bool.name: False}
+        ),
+        'GET_USER_ANSWER': MacroNLG(get_user_answer),
+        'SET_USER_ANSWER': MacroGPTJSON(
+            'Does the speaker seem satisfied?',
+            {V.music_artist_preference.name: True},
+            {V.music_artist_preference.name: False}
         ),
         'GET_MOVIE': MacroRecommendMovie(),
         'GET_SONG': MacroRecommendSong(),
@@ -333,41 +363,81 @@ def get_favorite_movie(vars: Dict[str, Any]):
     return vars[V.favorite_movie.name]
 
 
+def get_favorite_movie_bool(vars: Dict[str, Any]):
+    return vars[V.favorite_movie_bool.name]
+
+
 def get_movie_genre_preference(vars: Dict[str, Any]):
     return vars[V.favorite_movie_genre.name]
+
+
+def get_movie_genre_preference_bool(vars: Dict[str, Any]):
+    return vars[V.favorite_movie_genre_bool.name]
 
 
 def get_movie_theme_preference(vars: Dict[str, Any]):
     return vars[V.favorite_movie_theme.name]
 
 
+def get_movie_theme_preference_bool(vars: Dict[str, Any]):
+    return vars[V.favorite_movie_theme_bool.name]
+
+
 def get_movie_character_preference(vars: Dict[str, Any]):
     return vars[V.favorite_movie_character.name]
+
+
+def get_movie_character_preference_bool(vars: Dict[str, Any]):
+    return vars[V.favorite_movie_character_bool.name]
 
 
 def get_favorite_music(vars: Dict[str, Any]):
     return vars[V.favorite_song.name]
 
 
+def get_favorite_music_bool(vars: Dict[str, Any]):
+    return vars[V.favorite_song_bool.name]
+
+
 def get_music_liked_aspect(vars: Dict[str, Any]):
     return vars.get(V.music_liked_aspect.name)
+
+
+def get_music_liked_aspect_bool(vars: Dict[str, Any]):
+    return vars.get(V.music_liked_aspect_bool.name)
 
 
 def get_music_genre_preference(vars: Dict[str, Any]):
     return vars.get(V.music_genre_preference.name)
 
 
+def get_music_genre_preference_bool(vars: Dict[str, Any]):
+    return vars.get(V.music_genre_preference_bool.name)
+
+
 def get_music_theme_preference(vars: Dict[str, Any]):
     return vars.get(V.music_theme_preference.name)
+
+
+def get_music_theme_preference_bool(vars: Dict[str, Any]):
+    return vars.get(V.music_theme_preference_bool.name)
 
 
 def get_music_artist_preference(vars: Dict[str, Any]):
     return vars.get(V.music_artist_preference.name)
 
 
+def get_music_artist_preference_bool(vars: Dict[str, Any]):
+    return vars.get(V.music_artist_preference_bool.name)
+
+
 def get_call_name(vars: Dict[str, Any]):
     ls = vars[V.call_names.name]
     return ls[random.randrange(len(ls))]
+
+
+def get_user_answer(vars: Dict[str, Any]):
+    return vars[V.user_answer.name]
 
 
 if __name__ == '__main__':
