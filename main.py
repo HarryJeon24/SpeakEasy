@@ -96,7 +96,7 @@ def visits() -> DialogueFlow:
                                 '#GET_TOPIC #USERINPUT': {
                                     'error': {
                                         '#ROUTINE #USERINPUT': {
-                                            'error': 'feedback'
+                                            'error': 'select_topic'
                                         },
                                         'error': {
                                             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
@@ -142,6 +142,10 @@ def visits() -> DialogueFlow:
         'state': 'travel',
     }
 
+    transitions_entertainment = {
+        'state': 'entertainment',
+    }
+
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transitions)
     df.load_transitions(health_transitions)
@@ -154,6 +158,7 @@ def visits() -> DialogueFlow:
     df.load_transitions(transitions_select_topic)
     df.load_transitions(transitions_music_rec)
     df.load_transitions(transitions_movie_rec)
+    df.load_transitions(transitions_entertainment)
     df.add_macros(macros)
     return df
 
@@ -303,12 +308,12 @@ class MacroTime(Macro):
 
 class MacroIntroduction(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
-                f'We are going to engage in a few minutes long conversation and I will provide some ' \
-                f'feedback on your conversational skills. Whenever the screen displays ' \
-                f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
-                f'finished. When you see "U:" press enter once again. Before we get started, '
-        # intro = "dad"
+        # intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
+        #         f'We are going to engage in a few minutes long conversation and I will provide some ' \
+        #         f'feedback on your conversational skills. Whenever the screen displays ' \
+        #         f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
+        #         f'finished. When you see "U:" press enter once again. Before we get started, '
+        intro = "dad"
         audio(intro)
 
 

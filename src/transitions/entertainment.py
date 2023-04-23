@@ -5,11 +5,10 @@ import openai
 from emora_stdm import DialogueFlow, Macro, Ngrams
 
 from src import utils
-from src.utils import MacroGPTJSON, MacroNLG
 
 import requests
 import random
-from evaluation import audio, MacroRecordAudio
+from src.transitions.evaluation import audio
 
 class V(Enum):
     call_names = 0  # str
