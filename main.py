@@ -670,6 +670,7 @@ def load(df: DialogueFlow, varfile: str):
         df.vars()['ANSWERS'] = ""
         df.vars()['UTTERANCE'] = 0
         df.vars()['BOTLOG'] = ""
+        df.vars()['SPOKENTIME'] = 0
     df.run()
     save(df, varfile)
 
