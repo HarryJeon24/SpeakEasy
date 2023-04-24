@@ -75,7 +75,9 @@ travel_question = {
                 }
             }
         },
-        '#MENEITHER': 'other_location'
+        'error': {
+            '#MENEITHER': 'other_location'
+        }
     },
     'error': {
         '#OK': 'other_location'
@@ -84,47 +86,43 @@ travel_question = {
 
 travel_other_location = {
     'state': 'other_location',
-    '`Are there any other places you would like to live in or visit?`': {
+    '#OTHER_PLACE #USERINPUT': {
         '#SET_LOCATION': {
-            '`I love` #GET_LOCATION `, I went there with my family once. Do you usually travel with your family?`': {
-                '#SET_USER_FAMILY': {
-                    '#IF(#GET_USER_FAMILY) `That\'s great! Traveling with family is lovely, but I have always '
-                    'wanted to solo travel. Would you ever do something like that?`': {
-                        '#SET_USER_SOLO': {
-                            '#IF(GET_USER_SOLO) `It would be so fun! You would really get to know yourself better`': 'feedback'  #transition into evalutaion!
+            '#GET_LOCATION3 #USERINPUT #SET_USER_FAMILY': {
+                '#GET_USER_FAMILY': {
+                    '#SOLO #USERINPUT #SET_USER_SOLO': {
+                        '#GET_USER_SOLO': {
+                            '#SOLOP #USERINPUT': 'feedback'  #transition into evalutaion!
                         },
-                        '`That makes sense, it would be scary.`': 'feedback', #transition into evaluation!
                         'error': {
-                            '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
-                        }
-                    },
-                    '`Ah I see. Do you travel with friends?`': {
-                        '#SET_USER_FRIENDS': {
-                            '#IF(#GET_USER_FRIENDS) `Same! Traveling with friends is my favorite. It was nice chatting!`': 'feedback',  #transition into evaluation!
-                            '`That makes sense! Thanks for chatting.`': 'feedback', #transition into evaluation!
-                            'error': {
-                                '`Okay. Thanks for chatting!`': 'feedback'   #transition into evaluation!
-                            }
+                            '#SOLON #USERINPUT': 'feedback'  # transition into evaluation!
                         }
                     },
                     'error': {
-                        '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
+                        '#THANKCHAT': 'feedback'  # transition into evaluation!
                     }
                 },
                 'error': {
-                    '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
+                    '#FRI #USERINPUT #SET_USER_FRIENDS': {
+                        '#GET_USER_FRIENDS': {
+                            '#FRIP #USERINPUT': 'feedback'
+                        },
+                        'error': {
+                            '#FRIN #USERINPUT': 'feedback'  # transition into evaluation!
+                        }
+                    }
                 }
             },
             'error': {
-                '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
+                '#THANKCHAT': 'feedback'  # transition into evaluation!
             }
         },
         'error': {
-            '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
+            '#THANKCHAT': 'feedback'  # transition into evaluation!
         }
     },
     'error': {
-        '`Okay. Thanks for chatting!`': 'feedback'  # transition into evaluation!
+        '#THANKCHAT': 'feedback'  # transition into evaluation!
     }
 }
 
@@ -273,12 +271,87 @@ class MacroMeNeither(Macro):
         return output
 
 
+class MacroOtherPlace(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = " Are there any other places you would like to live in or visit?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroGET_LOCATION3(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        ls = vars[V.location.name]
+        ls = ls[random.randrange(len(ls))]
+        output = "I love " + ls + ", I went there with my family once. Do you usually travel with your family?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroSolo(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "That\'s great! Traveling with family is lovely, but I have always wanted to solo travel. Would you " \
+                 "ever do something like that?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroSoloP(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "It would be so fun! You would really get to know yourself better"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+class MacroSoloN(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "That makes sense, it would be scary."
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroThankC(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Okay. Thanks for chatting!"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroFRI(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Ah I see. Do you travel with friends?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroFRIP(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "Same! Traveling with friends is my favorite. It was nice chatting with you!"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroFRIN(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "That makes sense! Thanks for chatting."
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
 def get_user_opinion(vars: Dict[str, Any]):
     return vars[V.user_opinion.name]
 
 
 def get_user_visited(vars: Dict[str, Any]):
     return vars[V.user_visited.name]
+
 
 def get_user_family(vars: Dict[str, Any]):
     return vars[V.user_family.name]

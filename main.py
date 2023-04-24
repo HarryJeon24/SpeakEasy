@@ -304,12 +304,12 @@ class MacroTime(Macro):
 
 class MacroIntroduction(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        # intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
-        #         f'We are going to engage in a few minutes long conversation and I will provide some ' \
-        #         f'feedback on your conversational skills. Whenever the screen displays ' \
-        #         f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
-        #         f'finished. When you see "U:" press enter once again. Before we get started, '
-        intro = "dad"
+        intro = f'My name is SpeakEasy. I am a chatbot designed to help you improve your conversations. ' \
+                f'We are going to engage in a few minutes long conversation and I will provide some ' \
+                f'feedback on your conversational skills. Whenever the screen displays ' \
+                f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
+                f'finished. When you see "U:" press enter once again. Before we get started, '
+        # intro = "dad"
         audio(intro)
 
 
@@ -585,6 +585,16 @@ macros = {
     'ISEE': tra.MacroISEE(),
     'MENEITHER': tra.MacroMeNeither(),
 
+    'OTHER_PLACE': tra.MacroOtherPlace(),
+    'GET_LOCATION3': tra.MacroGET_LOCATION3(),
+    'SOLO': tra.MacroSolo(),
+    'SOLOP': tra.MacroSoloP(),
+    'SOLON': tra.MacroSoloN(),
+    'THANKCHAT': tra.MacroThankC(),
+    'FRI': tra.MacroFRI(),
+    'FRIP': tra.MacroFRIP(),
+    'FRIN': tra.MacroFRIN(),
+    
     'GET_USER_OPINION': MacroNLG(tra.get_user_opinion),
     'SET_USER_OPINION': MacroGPTJSON(
         'Is the speaker\'s answer likely to be "yes"?',

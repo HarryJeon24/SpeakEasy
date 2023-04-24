@@ -20,12 +20,19 @@ nltk.download('punkt')
 
 # Function words list (you can modify this list as needed)
 function_words_list = [
-    "a", "an", "the", "and", "or", "but", "in", "on", "at", "of",
     "i", "me", "my", "mine", "you", "your", "yours", "he", "him", "his",
     "she", "her", "hers", "we", "us", "our", "ours", "they", "them", "their", "theirs",
-    "it", "its", "who", "whom", "whose", "this", "that", "these", "those", "there",
+    "it", "its", "this", "that", "these", "those",
     "is", "am", "are", "was", "were", "be", "been", "being", "have", "has", "had",
-    "do", "does", "did", "will", "would", "shall", "should", "may", "might", "must", "can", "could"
+    "do", "does", "did", "will", "would", "shall", "should", "may", "might", "must", "can", "could",
+    "and", "or", "but", "so", "if", "then", "else", "though", "although", "because", "since", "unless",
+    "a", "an", "the", "some", "any",
+    "first", "next", "last", "many", "much", "several", "few", "less",
+    "more", "most", "several", "such", "only", "own", "just", "than",
+    "too", "very", "also", "well", "even", "like", "yeah", "right",
+    "actually", "basically", "certainly", "definitely", "finally", "generally", "honestly",
+    "however", "indeed", "maybe", "naturally", "obviously", "perhaps", "possibly",
+    "probably", "quite", "really", "simply", "surely", "truly", "usually", "you know"
 ]
 
 
@@ -330,8 +337,10 @@ class MacroTic(Macro):
 
 class MacroAcknow(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        mean_lsm = calculate_mean_lsm(vars['BOTLOG'], vars['ANSWERS'], function_words_list)
+        #mean_lsm = calculate_mean_lsm(vars['BOTLOG'], vars['ANSWERS'], function_words_list)
+        mean_lsm = language_style_matching(vars['BOTLOG'], vars['ANSWERS'], function_words_list)
         vars['LSM'] = mean_lsm
+        print(mean_lsm)
         if mean_lsm >= 0.8:
             a = "You have successfully showed your attention to your partner."
         else:
