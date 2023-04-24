@@ -18,6 +18,8 @@ from src.transitions.evaluation import transitions_feedback, transitions_evaluat
 import src.transitions.evaluation as evaluation
 from src.transitions.entertainment import transitions_select_topic, transitions_movie, transitions_music, transitions_movie_rec, transitions_music_rec
 import src.transitions.entertainment as ent
+from src.transitions.travel import transitions_travel, travel_question, travel_other_location
+import src.transitions.travel as tra
 
 class V(Enum):
     person_name = 0  # str
@@ -96,7 +98,7 @@ def visits() -> DialogueFlow:
                                 '#GET_TOPIC #USERINPUT': {
                                     'error': {
                                         '#ROUTINE #USERINPUT': {
-                                            'error': 'movie'
+                                            'error': 'travel'
                                         },
                                         'error': {
                                             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
@@ -138,27 +140,21 @@ def visits() -> DialogueFlow:
         'state': 'health',
     }
 
-    travel_transitions = {
-        'state': 'travel',
-    }
 
-    transitions_entertainment = {
-        'state': 'entertainment',
-    }
 
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transitions)
     df.load_transitions(health_transitions)
-    df.load_transitions(travel_transitions)
     df.load_transitions(transitions_feedback)
     df.load_transitions(transitions_evaluation)
-    df.load_transitions(travel_transitions)
     df.load_transitions(transitions_music)
     df.load_transitions(transitions_movie)
     df.load_transitions(transitions_select_topic)
     df.load_transitions(transitions_music_rec)
     df.load_transitions(transitions_movie_rec)
-    df.load_transitions(transitions_entertainment)
+    df.load_transitions(transitions_travel)
+    df.load_transitions(travel_question)
+    df.load_transitions(travel_other_location)
     df.add_macros(macros)
     return df
 
@@ -559,6 +555,65 @@ macros = {
     'GET_SONG': ent.MacroRecommendSong(),
     'SONG_GET_ARTIST': ent.MacroGetSongArtist(),
     'MOVIE_GET_OVERVIEW': ent.MacroGetMovieOverview(),
+
+    # Travel
+    'WHEREF': tra.MacroWhereF(),
+    'GET_LOCATION': tra.Macroget_location(),
+    'SET_LOCATION': MacroGPTJSON(
+        'What place does the speaker mention?',
+        {tra.V.location.name: ["Austria", "Europe", "Chicago"]}),
+
+    'FAV_PART': tra.MacroFavPart(),
+    'GET_FAVORITE': tra.MacroGetFavThing(),
+    'SET_FAVORITE': MacroGPTJSON(
+        'What does the speaker like about the place they mentioned?',
+        {tra.V.favoriteThing.name: ["great weather", "good food", "feels like home"]}),
+    'GOOGLE': tra.MacroGoogle(),
+    'SUCKS': tra.MacroSucks(),
+    'RB': tra.MacroRB(),
+    'RATHER_LIVE': tra.MacroRatherLive(),
+    'SOUND': tra.MacroSound(),
+    'GET_LOCATION2': tra.Macroget_location2(),
+    'OYSTER': tra.MacroOyster(),
+
+    'HAVE_YOU': tra.MacroHaveYou(),
+    'WHAT_ACT': tra.MacroWhatAct(),
+    'GET_ACTIVITY': tra.Macroget_activity(),
+    'SET_ACTIVITY': MacroGPTJSON(
+        'What did the speaker do (in present tense)?',
+        {tra.V.favoriteThing.name: ["go to the museum", "eat good food", "go swimming"]}),
+    'ISEE': tra.MacroISEE(),
+    'MENEITHER': tra.MacroMeNeither(),
+
+    'GET_USER_OPINION': MacroNLG(tra.get_user_opinion),
+    'SET_USER_OPINION': MacroGPTJSON(
+        'Is the speaker\'s answer likely to be "yes"?',
+        {tra.V.user_opinion.name: True},
+        {tra.V.user_opinion.name: False}),
+
+    'GET_USER_VISITED': MacroNLG(tra.get_user_visited),
+    'SET_USER_VISITED': MacroGPTJSON(
+        'Is the speaker\'s answer likely to be "yes"?',
+        {tra.V.user_visited.name: True},
+        {tra.V.user_visited.name: False}),
+
+    'GET_USER_FAMILY': MacroNLG(tra.get_user_family),
+    'SET_USER_FAMILY': MacroGPTJSON(
+        'Is the speaker\'s answer likely to be "yes"?',
+        {tra.V.user_family.name: True},
+        {tra.V.user_family.name: False}),
+
+    'GET_USER_SOLO': MacroNLG(tra.get_user_solo),
+    'SET_USER_SOLO': MacroGPTJSON(
+        'The speaker was asked whether they have solo traveled. Is the speaker\'s answer likely to be "yes"?',
+        {tra.V.user_solo.name: True},
+        {tra.V.user_solo.name: False}),
+
+    'GET_USER_FRIENDS': MacroNLG(tra.get_user_friends),
+    'SET_USER_FRIENDS': MacroGPTJSON(
+        'Is the speaker\'s answer likely to be "yes"? They were just asked whether they travel with friends',
+        {tra.V.user_friends.name: True},
+        {tra.V.user_friends.name: False}),
 
     # Evaluation
     'GET_EVAL': MacroNLG(evaluation.get_eval),

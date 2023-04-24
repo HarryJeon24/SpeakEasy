@@ -35,7 +35,7 @@ class V(Enum):
 
 class Macrotalkmovie(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        output = "Let\'s talk about movies."
+        output = "Let\'s talk about movies. "
         vars['BOTLOG'] = vars['BOTLOG'] + output
         audio(output)
         return output
@@ -43,7 +43,7 @@ class Macrotalkmovie(Macro):
 
 class Macrotalkmusic(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        output = "Let\'s talk about music."
+        output = "Let\'s talk about music. "
         vars['BOTLOG'] = vars['BOTLOG'] + output
         audio(output)
         return output
