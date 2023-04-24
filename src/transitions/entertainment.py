@@ -255,7 +255,7 @@ def get_favorite_music_bool(vars: Dict[str, Any]):
 class MacroGetMusicA(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
         output = "Interesting! I can see why you like " + str(vars[V.favorite_song.name]) +\
-                 " in the song. What genre is " + str(vars[V.favorite_song.name]) + " from?"
+                 " in the song. What genre is " + str(vars[V.favorite_song.name]) + "."
         vars['BOTLOG'] = vars['BOTLOG'] + output
         audio(output)
         return output
