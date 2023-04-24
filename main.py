@@ -96,7 +96,7 @@ def visits() -> DialogueFlow:
                                 '#GET_TOPIC #USERINPUT': {
                                     'error': {
                                         '#ROUTINE #USERINPUT': {
-                                            'error': 'select_topic'
+                                            'error': 'movie'
                                         },
                                         'error': {
                                             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
@@ -477,7 +477,7 @@ macros = {
     'FAV_MOVIE': ent.Macrofavmovie(),
     'FAV_SONG': ent.Macrofavmusic(),
     'GET_MOVIE_PREFERENCE': ent.MacroGetFavMovie(),
-    'GET_MOVIE_PREFERENCE_BOOL': MacroNLG(ent.get_favorite_movie_bool),
+    'GET_MOVIE_PREFERENCE_BOOL': ent.Macroget_favorite_movie_bool(),
     'SET_MOVIE_PREFERENCE': MacroGPTJSON(
         'What is the speaker\'s favorite movie?',
         {ent.V.favorite_movie.name: "Forrest Gump", ent.V.favorite_movie_bool.name: True},
@@ -548,11 +548,11 @@ macros = {
     'WHO_FAV': ent.MacroWhoFav(),
     'MORE_T': ent.MacroMoreT(),
     'WHAT_G': ent.MacroWhatG(),
-    'GET_USER_ANSWER': MacroNLG(ent.get_user_answer),
+    'GET_USER_ANSWER': ent.Macroget_user_answer(),
     'SET_USER_ANSWER': MacroGPTJSON(
         'Does the speaker seem satisfied?',
-        {ent.V.music_artist_preference.name: True},
-        {ent.V.music_artist_preference.name: False}
+        {ent.V.user_answer.name: True},
+        {ent.V.user_answer.name: False}
     ),
     'GET_MOVIE': ent.MacroRecommendMovie(),
     'ANOTHER': ent.MacroAnother(),

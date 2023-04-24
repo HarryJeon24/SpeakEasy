@@ -12,8 +12,8 @@ from enum import Enum
 from typing import Dict, Any
 import openai
 from emora_stdm import DialogueFlow
-import utils
-from utils import MacroGPTJSON, MacroNLG
+import src.utils
+from src.utils import MacroGPTJSON, MacroNLG
 
 
 class V(Enum):

@@ -4,8 +4,8 @@ from typing import Dict, Any
 import openai
 from emora_stdm import DialogueFlow
 
-from src.transitions import utils
-from src.transitions.utils import MacroGPTJSON, MacroNLG
+from src import utils
+from src.utils import MacroGPTJSON, MacroNLG
 
 
 class V(Enum):

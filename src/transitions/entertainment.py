@@ -165,8 +165,9 @@ class MacroGetFavMovie(Macro):
         return output
 
 
-def get_favorite_movie_bool(vars: Dict[str, Any]):
-    return vars[V.favorite_movie_bool.name]
+class Macroget_favorite_movie_bool(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        return vars[V.favorite_movie_bool.name]
 
 
 class MacroGetFavMovieG(Macro):
@@ -349,8 +350,9 @@ def get_call_name(vars: Dict[str, Any]):
     return ls[random.randrange(len(ls))]
 
 
-def get_user_answer(vars: Dict[str, Any]):
-    return vars[V.user_answer.name]
+class Macroget_user_answer(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        return vars[V.user_answer.name]
 
 
 transitions = {
@@ -364,132 +366,116 @@ transitions = {
 
 transitions_select_topic = {
     'state': 'select_topic',
-    '#GATE #TALK_MOVIE': 'movie',
-    '#GATE #TALK_MUSIC': 'music',
-    '`That\'s all I can talk about.`': {
-        'state': 'feedback',
-        'score': 0.1
-    }
+    '#TALK_MOVIE': 'movie',
+    '#TALK_MUSIC': 'music',
 }
 
 transitions_movie = {
     'state': 'movie',
-    '#FAV_MOVIE #USERINPUT': {
-        '#SET_MOVIE_PREFERENCE': {
-            '#IF(#GET_MOVIE_PREFERENCE_BOOL) #GET_MOVIE_PREFERENCE #USERINPUT': {
-                '#SET_MOVIE_GENRE_PREFERENCE': {
-                    '#IF(#GET_MOVIE_GENRE_PREFERENCE_BOOL) #GET_MOVIE_GENRE_PREFERENCE #USERINPUT': {
+    '#TALK_MOVIE #FAV_MOVIE #USERINPUT #SET_MOVIE_PREFERENCE': {
+        '#GET_MOVIE_PREFERENCE_BOOL': {
+            '#GET_MOVIE_PREFERENCE #USERINPUT #SET_MOVIE_GENRE_PREFERENCE': {
+                '#GET_MOVIE_GENRE_PREFERENCE_BOOL': {
+                    '#GET_MOVIE_GENRE_PREFERENCE #USERINPUT #SET_MOVIE_THEME_PREFERENCE': {
                         'state': 'movie_theme',
-                        '#SET_MOVIE_THEME_PREFERENCE': {
-                            '#IF(#GET_MOVIE_THEME_PREFERENCE_BOOL) #GET_MOVIE_THEME_PREFERENCE #USERINPUT': {
+                        '#GET_MOVIE_THEME_PREFERENCE_BOOL': {
+                            '#GET_MOVIE_THEME_PREFERENCE #USERINPUT #SET_MOVIE_CHARACTER_PREFERENCE': {
                                 'state': 'movie_character',
-                                '#SET_MOVIE_CHARACTER_PREFERENCE': {
-                                    '#IF(#GET_MOVIE_CHARACTER_PREFERENCE_BOOL) #GET_MOVIE_CHARACTER_PREFERENCE '
-                                    '#USERINPUT': {
+                                '#GET_MOVIE_CHARACTER_PREFERENCE_BOOL': {
+                                    '#GET_MOVIE_CHARACTER_PREFERENCE #USERINPUT': {
                                         'error': {
                                             '#THANK_REC': 'movie_rec',
                                         }
-                                    },
-                                    '#THANK_REC': {
-                                        'state': 'movie_rec',
-                                        'score': 0.1
                                     }
+                                },
+                                'error': {
+                                    '#THANK_REC': 'movie_rec'
                                 }
-                            },
-                            '#WHO_FAV_C #USERINPUT': {
-                                'state': 'movie_character',
-                                'score': 0.1
                             }
+                        },
+                        'error': {
+                            '#WHO_FAV_C #USERINPUT #SET_MOVIE_CHARACTER_PREFERENCE': 'movie_character'
                         }
-                    },
-                    '#WHAT_FAV_T #USERINPUT': {
-                        'state': 'movie_theme',
-                        'score': 0.1
                     }
+                },
+                'error': {
+                    '#WHAT_FAV_T #USERINPUT #SET_MOVIE_THEME_PREFERENCE': 'movie_theme'
                 }
-            },
-            '#OK': {
-                'state': 'select_topic',
-                'score': 0.1
             }
+        },
+        'error': {
+            '#OK': 'music'
         }
     }
 }
 
 transitions_movie_rec = {
     'state': 'movie_rec',
-    '#GET_MOVIE #USERINPUT': {
-        '#SET_USER_ANSWER': {
-            '#IF(#GET_USER_ANSWER) #OK': 'select_topic',
-            '#ANOTHER': {
-                'state': 'movie_rec',
-                'score': 0.1
-            }
+    '#GET_MOVIE #USERINPUT #SET_USER_ANSWER': {
+        '#GET_USER_ANSWER': {
+            '#OK': 'music'
+        },
+        'error': {
+            '#ANOTHER': 'movie_rec'
         }
     }
 }
 
 transitions_music = {
     'state': 'music',
-    '#FAV_SONG #USERINPUT': {
-        '#SET_MUSIC_PREFERENCE': {
-            '#IF(#GET_MUSIC_PREFERENCE_BOOL) #GET_MUSIC_PREFERENCE #USERINPUT': {
-                '#SET_MUSIC_LIKED_ASPECT': {
-                    '#IF(#GET_MUSIC_LIKED_ASPECT_BOOL) #GET_MUSIC_LIKED_ASPECT #USERINPUT': {
+    '#TALK_MUSIC #FAV_SONG #USERINPUT #SET_MUSIC_PREFERENCE': {
+        '#GET_MUSIC_PREFERENCE_BOOL': {
+            '#GET_MUSIC_PREFERENCE #USERINPUT #SET_MUSIC_LIKED_ASPECT': {
+                '#GET_MUSIC_LIKED_ASPECT_BOOL': {
+                    '#GET_MUSIC_LIKED_ASPECT #USERINPUT #SET_MUSIC_GENRE_PREFERENCE': {
                         'state': 'genre',
-                        '#SET_MUSIC_GENRE_PREFERENCE': {
-                            '#IF(#GET_MUSIC_GENRE_PREFERENCE_BOOL) #GET_MUSIC_GENRE_PREFERENCE #USERINPUT': {
+                        '#GET_MUSIC_GENRE_PREFERENCE_BOOL': {
+                            '#GET_MUSIC_GENRE_PREFERENCE #USERINPUT #SET_MUSIC_THEME_PREFERENCE': {
                                 'state': 'music_pref',
-                                '#SET_MUSIC_THEME_PREFERENCE': {
-                                    '#IF(#GET_MUSIC_THEME_PREFERENCE_BOOL) #GET_MUSIC_THEME_PREFERENCE #USERINPUT': {
+                                '#GET_MUSIC_THEME_PREFERENCE_BOOL': {
+                                    '#GET_MUSIC_THEME_PREFERENCE #USERINPUT #SET_MUSIC_ARTIST_PREFERENCE': {
                                         'state': 'artist',
-                                        '#SET_MUSIC_ARTIST_PREFERENCE': {
-                                            '#IF(#GET_MUSIC_ARTIST_PREFERENCE_BOOL) #GET_MUSIC_ARTIST_PREFERENCE #USERINPUT': {
+                                        '#GET_MUSIC_ARTIST_PREFERENCE_BOOL': {
+                                            '#GET_MUSIC_ARTIST_PREFERENCE #USERINPUT': {
                                                 'error': {
                                                     '#THANK_REC2': 'music_rec',
                                                 }
-                                            },
-                                            '#THANK_REC2': {
-                                                'state': 'music_rec',
-                                                'score': 0.1
                                             }
+                                        },
+                                        'error': {
+                                            '#THANK_REC2': 'music_rec'
                                         }
-                                    },
-                                    '#WHO_FAV #USERINPUT': {
-                                        'state': 'artist',
-                                        'score': 0.1
                                     }
+                                },
+                                'error': {
+                                    '#WHO_FAV #USERINPUT #SET_MUSIC_ARTIST_PREFERENCE': 'artist'
                                 }
-                            },
-                            '#MORE_T #USERINPUT': {
-                                'state': 'music_pref',
-                                'score': 0.1
                             }
+                        },
+                        'error': {
+                            '#MORE_T #USERINPUT #SET_MUSIC_THEME_PREFERENCE': 'music_pref'
                         }
-                    },
-                    '#WHAT_G #USERINPUT': {
-                        'state': 'genre',
-                        'score': 0.1
                     }
+                },
+                'error': {
+                    '#WHAT_G #USERINPUT #SET_MUSIC_GENRE_PREFERENCE': 'genre'
                 }
-            },
-            '#OK': {
-                'state': 'select_topic',
-                'score': 0.1
             }
+        },
+        'error': {
+            '#OK': 'travel'
         }
     }
 }
 
 transitions_music_rec = {
     'state': 'music_rec',
-    '#GET_SONG #USERINPUT': {
-        '#SET_USER_ANSWER': {
-            '#IF(#GET_USER_ANSWER) #OK': 'select_topic',
-            '#ANOTHER': {
-                'state': 'music_rec',
-                'score': 0.1
-            }
+    '#GET_MOVIE #USERINPUT #SET_USER_ANSWER': {
+        '#GET_USER_ANSWER': {
+            '#OK': 'travel'
+        },
+        'error': {
+            '#ANOTHER': 'music_rec'
         }
     }
 }
