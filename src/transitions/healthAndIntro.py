@@ -140,7 +140,7 @@ food_transitions = {
     'state': 'food',
     '#FOOD #USERINPUT': {
         '#SET_FOOD': {
-            '#GET_FOOD #USERINPUT #SET_EATING ': {
+            '#GET_FOOD #USERINPUT #SET_EATING': {
                 '#GET_EATING': {
                     '#EATP #USERINPUT': {
                         'error': 'travel'

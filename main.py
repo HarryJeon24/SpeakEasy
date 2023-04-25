@@ -20,6 +20,9 @@ from src.transitions.entertainment import transitions_select_topic, transitions_
 import src.transitions.entertainment as ent
 from src.transitions.travel import transitions_travel, travel_question, travel_other_location
 import src.transitions.travel as tra
+from src.transitions.healthAndIntro import health_transitions, food_transitions
+import src.transitions.healthAndIntro as hlth
+
 
 class V(Enum):
     person_name = 0  # str
@@ -98,7 +101,7 @@ def visits() -> DialogueFlow:
                                 '#GET_TOPIC #USERINPUT': {
                                     'error': {
                                         '#ROUTINE #USERINPUT': {
-                                            'error': 'travel'
+                                            'error': 'health'
                                         },
                                         'error': {
                                             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
@@ -136,15 +139,8 @@ def visits() -> DialogueFlow:
         }
     }
 
-    health_transitions = {
-        'state': 'health',
-    }
-
-
-
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transitions)
-    df.load_transitions(health_transitions)
     df.load_transitions(transitions_feedback)
     df.load_transitions(transitions_evaluation)
     df.load_transitions(transitions_music)
@@ -155,6 +151,8 @@ def visits() -> DialogueFlow:
     df.load_transitions(transitions_travel)
     df.load_transitions(travel_question)
     df.load_transitions(travel_other_location)
+    df.load_transitions(health_transitions)
+    df.load_transitions(food_transitions)
     df.add_macros(macros)
     return df
 
@@ -466,6 +464,57 @@ macros = {
         {V.activity.name: "working out"}
     ),
     'GET_TOPIC': MacroNLG(get_topic),
+
+    # Health & Food
+    'HEALTHY': hlth.MacroHealthy(),
+    'PHY': hlth.MacroPhy(),
+    'SET_LIFESTYLE': MacroGPTJSON(
+        'Is the speaker indicating that they have a healthy lifestyle, true or false?',
+        {hlth.V.healthy.name: True},
+        {hlth.V.healthy.name: False}
+    ),
+    'GET_LIFESTYLE': MacroNLG(hlth.get_lifestyle),
+    'SET_EXERCISE': MacroGPTJSON(
+        'the speaker is indicating that they exercise, true or false?',
+        {hlth.V.exercise.name: True},
+        {hlth.V.exercise.name: False}
+    ),
+    'GET_EXERCISE': MacroNLG(hlth.get_exercise),
+    'EXP': hlth.MacroExP(),
+    'EXN': hlth.MacroExN(),
+    'SET_BUDDY': MacroGPTJSON(
+        'Is the speaker indicating that they have friends, true or false?',
+        {hlth.V.buddy.name: True},
+        {hlth.V.buddy.name: False}
+    ),
+    'GET_BUDDY': MacroNLG(hlth.get_buddy),
+    'BUP': hlth.MacroBuP(),
+    'BUN': hlth.MacroBuN(),
+    'SET_BALANCE': MacroGPTJSON(
+        'What is the user indicating that they need to work on?',
+        {hlth.V.balance.name: "managing homework"},
+        {hlth.V.balance.name: "nothing"}
+    ),
+    'BALANCE': hlth.MacroBalance(),
+    'GET_BALANCE': hlth.MacroGetBalance(),
+    'BAL_FOOD': hlth.MacroBalFood(),
+    'SET_FOOD': MacroGPTJSON(
+        'What is the user\'s favorite place to eat?',
+        {hlth.V.food.name: "chipotle"},
+        {hlth.V.food.name: "none"}
+    ),
+    'FOOD': hlth.MacroFood(),
+    'GET_FOOD': hlth.MacroGetFood(),
+    'SET_EATING': MacroGPTJSON(
+        'Is the speaker indicating that they have a healthy diet, true or false?',
+        {hlth.V.healthy_diet.name: True},
+        {hlth.V.healthy_diet.name: False}
+    ),
+    'GET_EATING': MacroNLG(hlth.get_eating),
+    'EATP': hlth.MacroEATP(),
+    'EATN': hlth.MacroEATN(),
+    'VEGMOVIE': hlth.MacroVegMovie(),
+    'FOOD2MOVIE' :hlth.MacroFoodToMovie(),
 
     # Entertainment
     'TALK_MOVIE': ent.Macrotalkmovie(),
