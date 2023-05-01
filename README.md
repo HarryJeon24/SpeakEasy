@@ -19,7 +19,7 @@ pip install openai emora-stdm pyaudio gtts mutagen
 ```
 3. For Mac, if an error along the lines of "Could not build wheels for pyaudio, since package 'wheel' is not installed" is given when installing PyAudio, please perform steps 1-5 in the solution from this article: https://stackoverflow.com/questions/73268630/error-could-not-build-wheels-for-pyaudio-which-is-required-to-install-pyprojec.
 
-4. While the Mac installation maybe a tad more tedious, the interface is nicer and easier to work with than the windows one.
+4. While the Mac installation maybe a tad more tedious, the interface is nicer and easier to work with than the Windows one.
 
 ## Setup
 
