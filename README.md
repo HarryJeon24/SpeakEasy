@@ -18,10 +18,18 @@ This repository contains a Python script for SpeakEasy chatbot application.
 
 1. Clone this repository to your local machine.
 
-2. Open the `main.py` and 'evaluation.py' files and replace the path in the following line of code with the path to your API key file:
+2. Open the `main.py` and 'evaluation.py' files and replace the path in the following linex of code:
 
 ```python
 openai.api_key_path = 'path/to/your/chat_gpt_api_key.txt'
+```
+
+```python
+SAVE_DIR = 'path/to/your/directory/to/save/USERINPUT.wav'
+```
+
+```python
+audio_file = open('path/to/your/directory/to/USERINPUT.wav')
 ```
 
 3. Replace the path in the following line of code with the appropriate path to the `visits.pkl` file on your computer:
