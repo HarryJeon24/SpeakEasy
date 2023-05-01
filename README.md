@@ -22,7 +22,7 @@ pip install openai emora-stdm pyaudio gtts mutagen
 
 1. Clone this repository to your local machine.
 
-2. Open the `main.py` and 'evaluation.py' files and replace the path in the following lines of code:
+2. Open the `main.py` and `evaluation.py` files and replace the path in the following lines of code:
 
 ```python
 openai.api_key_path = 'path/to/your/chat_gpt_api_key.txt'
@@ -46,7 +46,7 @@ path = 'path/to/your/directory/to/save/userlog.pkl'
 load(df, 'path/to/your/userlog.pkl')
 ```
 
-4. For Windows, open the `main.py` and 'evaluation.py' files and comment out the following line of code:
+4. For Windows, open the `main.py` and `evaluation.py` files and comment out the following line of code:
 
 ```python
 os.system("afplay bot_output.mp3") # Mac
