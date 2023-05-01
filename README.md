@@ -30,6 +30,10 @@ openai.api_key_path = 'path/to/your/chat_gpt_api_key.txt'
 load(df, 'path/to/your/visits.pkl')
 ```
 
+4. For Windows, to be filled...
+
+5. For Mac, to be filled...
+
 ## Running the Application
 
 1. Open a terminal or command prompt, navigate to the directory containing the `main.py` file, and run the following command:
