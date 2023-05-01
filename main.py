@@ -16,10 +16,16 @@ import threading
 from mutagen.mp3 import MP3
 from src.transitions.evaluation import transitions_feedback, transitions_evaluation
 import src.transitions.evaluation as evaluation
-from src.transitions.entertainment import transitions_select_topic, transitions_movie, transitions_music, transitions_movie_rec, transitions_music_rec
+from src.transitions.entertainment import transitions_select_topic, transitions_movie, transitions_music, \
+    transitions_movie_rec, transitions_music_rec
 import src.transitions.entertainment as ent
 from src.transitions.travel import transitions_travel, travel_question, travel_other_location
 import src.transitions.travel as tra
+from src.transitions.healthAndIntro import health_transitions, food_transitions
+import src.transitions.babel as babel
+from src.transitions.babel import transitions_babel, transitions_outro
+import src.transitions.healthAndIntro as hlth
+
 
 class V(Enum):
     person_name = 0  # str
@@ -98,7 +104,7 @@ def visits() -> DialogueFlow:
                                 '#GET_TOPIC #USERINPUT': {
                                     'error': {
                                         '#ROUTINE #USERINPUT': {
-                                            'error': 'travel'
+                                            'error': 'health'
                                         },
                                         'error': {
                                             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." '
@@ -136,15 +142,12 @@ def visits() -> DialogueFlow:
         }
     }
 
-    health_transitions = {
-        'state': 'health',
-    }
-
-
-
     df = DialogueFlow('start', end_state='end')
     df.load_transitions(transitions)
     df.load_transitions(health_transitions)
+    df.load_transitions(transitions_babel)
+    df.load_transitions(transitions_outro)
+    df.load_transitions(food_transitions)
     df.load_transitions(transitions_feedback)
     df.load_transitions(transitions_evaluation)
     df.load_transitions(transitions_music)
@@ -162,8 +165,9 @@ def visits() -> DialogueFlow:
 def audio(text: str):
     tts = gTTS(text=text, lang='en')
     tts.save("bot_output.mp3")
-    os.system("start bot_output.mp3")
-    time.sleep(MP3("bot_output.mp3").info.length)
+    os.system("afplay bot_output.mp3")  # Mac
+    # os.system("start bot_output.mp3")  # Windows
+    # time.sleep(MP3("bot_output.mp3").info.length)
 
 
 # Macro's for audios
@@ -185,7 +189,8 @@ class MacroRecordAudio(Macro):
         CHUNK = 1024
 
         # Specify the directory to save the file
-        SAVE_DIR = "/src"
+        # SAVE_DIR = "/src"  #Harry
+        SAVE_DIR = "/Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy2/src"  # Max
         if not os.path.exists(SAVE_DIR):
             os.makedirs(SAVE_DIR)
 
@@ -244,8 +249,12 @@ class MacroRecordAudio(Macro):
         wf.writeframes(b''.join(frames))
         wf.close()
 
-        openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
-        audio_file = open("/src/USERINPUT.wav", "rb")
+        # C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt
+        # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/chat_gpt_api_key.txt
+        openai.api_key_path = '/Users/maxbagga/Desktop/Emory 8th Semester/CS 329/chat_gpt_api_key.txt'
+        # C:/Users/Harry/PycharmProjects/SpeakEasy/src/USERINPUT.wav
+        # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy/srcUSERINPUT.wav
+        audio_file = open("/Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy2/src/USERINPUT.wav", "rb")
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
         text = transcript['text']
         vars['USERINPUT'] = text
@@ -309,7 +318,6 @@ class MacroIntroduction(Macro):
                 f'feedback on your conversational skills. Whenever the screen displays ' \
                 f'"Recording... Press Enter to stop" please begin speaking and press Enter when you are ' \
                 f'finished. When you see "U:" press enter once again. Before we get started, '
-        # intro = "dad"
         audio(intro)
 
 
@@ -634,23 +642,136 @@ macros = {
         'Considering the user input about the conversation, assign a score: -1 for negative, 0 for neutral, '
         '1 for positive.', {evaluation.V.effectiveness.name: "0"}),
     'GPTSAT': MacroGPTJSON(
-        'Considering the user input about the satisfaction of the conversation, assign a score to satisfactiory: -1 for negative, 0 for neutral, '
-        '1 for positive. Do not assign the score to effectiveness.', {evaluation.V.satisfactory.name: "0"}),
+        'Considering the user input about the satisfaction of the conversation, assign a score to satisfactiory: -1 '
+        'for negative, 0 for neutral, 1 for positive. Do not assign the score to effectiveness.',
+        {evaluation.V.satisfactory.name: "0"}),
     'GPTCOR': MacroGPTJSON(
-        'Considering the user input about the correctness of the conversation, assign a score to correctness: -1 for negative, 0 for neutral, '
-        '1 for positive. Do not assign score to effectiveness.', {evaluation.V.correctness.name: "0"}),
+        'Considering the user input about the correctness of the conversation, assign a score to correctness: -1 for'
+        ' negative, 0 for neutral, 1 for positive. Do not assign score to effectiveness.',
+        {evaluation.V.correctness.name: "0"}),
     'GPTINT': MacroGPTJSON(
-        'Considering the user input about the interpretability of the conversation, assign a score to interpretability: -1 for negative, 0 for '
-        'neutral, 1 for positive. Do not assign score to effectiveness.', {evaluation.V.interpretability.name: "0"}),
+        'Considering the user input about the interpretability of the conversation, assign a score to '
+        'interpretability: -1 for negative, 0 for neutral, 1 for positive. Do not assign score to effectiveness.',
+        {evaluation.V.interpretability.name: "0"}),
     'GPTCOH': MacroGPTJSON(
-        'Considering the user input about the coherence of the conversation, assign a score to coherence: -1 for negative, 0 for neutral, '
-        '1 for positive. Do not assign score to effectiveness.', {evaluation.V.coherence.name: "0"}),
+        'Considering the user input about the coherence of the conversation, assign a score to coherence: -1 for'
+        ' negative, 0 for neutral, 1 for positive. Do not assign score to effectiveness.',
+        {evaluation.V.coherence.name: "0"}),
     "QUEST": evaluation.MacroNumQuestions(),
     "SPEED": evaluation.MacroAVGToken(),
     "TIC": evaluation.MacroTic(),
     "ACKNOW": evaluation.MacroAcknow(),
     "AWKWARD": evaluation.MacroAwkward(),
-    "DETAIL": evaluation.MacroDetail()
+    "DETAIL": evaluation.MacroDetail(),
+
+    # BABEL Macros
+    'GET_USER_STRLN': MacroNLG(babel.get_user_strln),
+    'GET_USER_STRLN_STR': MacroNLG(babel.get_user_strln_str),
+    'SET_USER_STRLN': MacroGPTJSON(
+        'Does the speaker have a preferred storyline from the movie "Babel"? The options are "Morocco", '
+        '"Richard/Susan", "United States/Mexico", and "Japan". Otherwise, choose "N/A".',
+        {babel.V.user_strln.name: True, babel.V.user_strln_str.name: "Japan"},
+        {babel.V.user_strln.name: False, babel.V.user_strln_str.name: "N/A"}),
+    'GET_USER_COMM': MacroNLG(babel.get_user_comm),
+    'GET_USER_COMM_STR': MacroNLG(babel.get_user_comm_str),
+    'SET_USER_COMM': MacroGPTJSON(
+        'What does the speaker think of the way the movie "Babel" explores cultural differences and '
+        'communication? Complete the sentence: "The speaker is saying that...".',
+        {babel.V.user_comm.name: True, babel.V.user_comm_str.name: "the movie did a good job."},
+        {babel.V.user_comm.name: False, babel.V.user_comm_str.name: "N/A"}),
+    'GET_USER_ACTOR': MacroNLG(babel.get_user_actor),
+    'GET_USER_ACTOR_STR': MacroNLG(babel.get_user_actor_str),
+    'SET_USER_ACTOR': MacroGPTJSON(
+        'Who is the speaker\'s favorite actor or actress?',
+        {babel.V.user_comm.name: True, babel.V.user_comm_str.name: "Brad Pitt"},
+        {babel.V.user_comm.name: False, babel.V.user_comm_str.name: "N/A"}),
+    'GET_USER_MESSAGE': MacroNLG(babel.get_user_message),
+    'GET_USER_MESSAGE_STR': MacroNLG(babel.get_user_message_str),
+    'SET_USER_MESSAGE': MacroGPTJSON(
+        'Summarize the speaker\'s opinion on this questions: "What message about human connection do you think '
+        'the filmmakers were trying to convey in "Babel"?"',
+        {babel.V.user_message.name: True, babel.V.user_message_str.name: "I think it emphasized our shared humanity."},
+        {babel.V.user_message.name: False, babel.V.user_message_str.name: "N/A"}),
+    'GET_USER_REASON': MacroNLG(babel.get_user_reason),
+    'GET_USER_REASON_STR': MacroNLG(babel.get_user_reason_str),
+    'SET_USER_REASON': MacroGPTJSON(
+        'Why does the speaker not like the movie? The options are "storyline", "casting", '
+        '"direction", "visuals", and "soundtrack".',
+        {babel.V.user_reason.name: True, babel.V.user_reason_str.name: "because the storyline is bad."},
+        {babel.V.user_reason.name: False, babel.V.user_reason_str.name: "N/A"}),
+    'GET_USER_INTEREST': MacroNLG(babel.get_user_interest),
+    'SET_USER_INTEREST': MacroGPTJSON(
+        'Is the speaker\'s answer likely to be "yes"?',
+        {babel.V.user_interest.name: True},
+        {babel.V.user_interest.name: False}),
+
+    # Text Macros
+    'THINK_MOVIE': babel.MacroThinkMovie(),
+    'LIKE_MOVIE': babel.MacroLikeMovie(),
+    'CULTURAL': babel.MacroCultural(),
+    'ACTOR': babel.MacroActor(),
+    'FILMMAKERS': babel.MacroFilmmakers(),
+    'HUMANITY': babel.MacroHumanity(),
+    'PERSONALLY': babel.MacroPersonally(),
+    'ALSO': babel.MacroAlso(),
+    'PERFORMANCES': babel.MacroPerformances(),
+    'COMMUNICATION': babel.MacroCommunication(),
+    'OPINION': babel.MacroOpinion(),
+    'CONTINUE': babel.MacroContinue(),
+    'AMAZING': babel.MacroAmazing(),
+    'SHARING': babel.MacroSharing(),
+    'THANKYOU': babel.MacroThankYou(),
+
+    # Health & Food
+    'HEALTHY': hlth.MacroHealthy(),
+    'PHY': hlth.MacroPhy(),
+    'SET_LIFESTYLE': MacroGPTJSON(
+        'Is the speaker indicating that they have a healthy lifestyle, true or false?',
+        {hlth.V.healthy.name: True},
+        {hlth.V.healthy.name: False}
+    ),
+    'GET_LIFESTYLE': MacroNLG(hlth.get_lifestyle),
+    'SET_EXERCISE': MacroGPTJSON(
+        'the speaker is indicating that they exercise, true or false?',
+        {hlth.V.exercise.name: True},
+        {hlth.V.exercise.name: False}
+    ),
+    'GET_EXERCISE': MacroNLG(hlth.get_exercise),
+    'EXP': hlth.MacroExP(),
+    'EXN': hlth.MacroExN(),
+    'SET_BUDDY': MacroGPTJSON(
+        'Is the speaker indicating that they have friends, true or false?',
+        {hlth.V.buddy.name: True},
+        {hlth.V.buddy.name: False}
+    ),
+    'GET_BUDDY': MacroNLG(hlth.get_buddy),
+    'BUP': hlth.MacroBuP(),
+    'BUN': hlth.MacroBuN(),
+    'SET_BALANCE': MacroGPTJSON(
+        'What is the user indicating that they need to work on?',
+        {hlth.V.balance.name: "managing homework"},
+        {hlth.V.balance.name: "nothing"}
+    ),
+    'BALANCE': hlth.MacroBalance(),
+    'GET_BALANCE': hlth.MacroGetBalance(),
+    'BAL_FOOD': hlth.MacroBalFood(),
+    'SET_FOOD': MacroGPTJSON(
+        'What is the user\'s favorite place to eat?',
+        {hlth.V.food.name: "chipotle"},
+        {hlth.V.food.name: "none"}
+    ),
+    'FOOD': hlth.MacroFood(),
+    'GET_FOOD': hlth.MacroGetFood(),
+    'SET_EATING': MacroGPTJSON(
+        'Is the speaker indicating that they have a healthy diet, true or false?',
+        {hlth.V.healthy_diet.name: True},
+        {hlth.V.healthy_diet.name: False}
+    ),
+    'GET_EATING': MacroNLG(hlth.get_eating),
+    'EATP': hlth.MacroEATP(),
+    'EATN': hlth.MacroEATN(),
+    'VEGMOVIE': hlth.MacroVegMovie(),
+    'FOOD2MOVIE': hlth.MacroFoodToMovie
 }
 
 
@@ -663,13 +784,14 @@ def save(df: DialogueFlow, varfile: str):
 def load(df: DialogueFlow, varfile: str):
     # 'C:/Users/Harry/PycharmProjects/SpeakEasy/src'
     # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy/src
-    path = f'C:/Users/Harry/PycharmProjects/SpeakEasy/{varfile}'
+    path = f'/Users/maxbagga/Desktop/Emory 8th Semester/CS 329/SpeakEasy2/{varfile}'
     if os.path.isfile(path):
         d = pickle.load(open(varfile, 'rb'))
         df.vars().update(d)
         df.vars()['ANSWERS'] = ""
         df.vars()['UTTERANCE'] = 0
         df.vars()['BOTLOG'] = ""
+        df.vars()['SPOKENTIME'] = 0
     df.run()
     save(df, varfile)
 
@@ -677,5 +799,5 @@ def load(df: DialogueFlow, varfile: str):
 if __name__ == '__main__':
     # C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt
     # /Users/maxbagga/Desktop/Emory 8th Semester/CS 329/chat_gpt_api_key.txt
-    openai.api_key_path = 'C:/Users/Harry/OneDrive/Desktop/resource/chat_gpt_api_key.txt'
+    openai.api_key_path = '/Users/maxbagga/Desktop/Emory 8th Semester/CS 329/chat_gpt_api_key.txt'
     load(visits(), 'src/userLog.pkl')

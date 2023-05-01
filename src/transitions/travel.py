@@ -47,7 +47,7 @@ transitions_travel = {
                             }
                         },
                         'error': {
-                            '#SOUND': 'movie'
+                            '#SOUND': 'travel_question'
                         }
                     }
                 }
@@ -188,8 +188,7 @@ class MacroSucks(Macro):
 
 class MacroRB(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
-        #return random.choice([True, False])
-        return False
+        return random.choice([True, False])
 
 
 class MacroRatherLive(Macro):

@@ -10,6 +10,7 @@ import requests
 import random
 from src.transitions.evaluation import audio
 
+
 class V(Enum):
     call_names = 0  # str
     favorite_movie = 1  # dict
@@ -463,7 +464,7 @@ transitions_music = {
             }
         },
         'error': {
-            '#OK': 'travel'
+            '#OK': 'feedback'
         }
     }
 }
@@ -472,7 +473,7 @@ transitions_music_rec = {
     'state': 'music_rec',
     '#GET_MOVIE #USERINPUT #SET_USER_ANSWER': {
         '#GET_USER_ANSWER': {
-            '#OK': 'travel'
+            '#OK': 'feedback'
         },
         'error': {
             '#ANOTHER': 'music_rec'

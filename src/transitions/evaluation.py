@@ -129,8 +129,9 @@ transitions_evaluation = {
 def audio(text: str):
     tts = gTTS(text=text, lang='en')
     tts.save("bot_output.mp3")
-    os.system("start bot_output.mp3")
-    time.sleep(MP3("bot_output.mp3").info.length)
+    os.system("afplay bot_output.mp3")  # Mac
+    # os.system("start bot_output.mp3")  # Window
+    # time.sleep(MP3("bot_output.mp3").info.length)  # Window
 
 
 class MacroRecordAudio(Macro):
@@ -256,7 +257,7 @@ def get_eval(vars: Dict[str, Any]):
 
     # Modify the EVAL string based on the negative attributes
     if negative_attributes:
-        negative_attributes_str = ', '.join(attr for attr in negative_attributes)
+        negative_attributes_str = ', '.join('and ' + attr for attr in negative_attributes)
         vars["EVAL"] = f"Thank you for your feedbacks. I will do my best to improve {negative_attributes_str} before " \
                        f"I see you again. Good bye."
     else:
@@ -269,14 +270,9 @@ def get_eval(vars: Dict[str, Any]):
 class MacroNumQuestions(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         if 'ANSWERS' not in vars:
-            print("yes")
             vars['NUMQUEST'] = 0
         else:
-            print("no")
             vars['NUMQUEST'] = vars['ANSWERS'].count("?")
-            print(vars['ANSWERS'])
-            print(vars['NUMQUEST'])
-            print(vars['UTTERANCE'])
         if float(vars['NUMQUEST'] / vars['UTTERANCE']) < 0.39:
             a = "You should consider asking more questions."
         else:
@@ -340,7 +336,6 @@ class MacroAcknow(Macro):
         #mean_lsm = calculate_mean_lsm(vars['BOTLOG'], vars['ANSWERS'], function_words_list)
         mean_lsm = language_style_matching(vars['BOTLOG'], vars['ANSWERS'], function_words_list)
         vars['LSM'] = mean_lsm
-        print(mean_lsm)
         if mean_lsm >= 0.8:
             a = "You have successfully showed your attention to your partner."
         else:
@@ -429,8 +424,6 @@ class MacroAwkward(Macro):
 
 class MacroDetail(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
-        print("macrodetail check:")
-        print(vars['detail'])
         if vars['detail'] == 'yes':
             a = "Here is the detailed report. Your LSM score which shows the similarity between your response and my " \
                 "response was " + str(round(vars['LSM'], 2)) + ", higher than 0.8 is a good score. I have counted a total of " \

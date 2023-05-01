@@ -1,11 +1,10 @@
 from enum import Enum
 from typing import Dict, Any
-
 import openai
-from emora_stdm import DialogueFlow
-
+from emora_stdm import DialogueFlow, Macro, Ngrams, List
 from src import utils
 from src.utils import MacroGPTJSON, MacroNLG
+from src.transitions.evaluation import audio
 
 
 class V(Enum):
@@ -23,84 +22,95 @@ class V(Enum):
     user_interest = 11  # bool
 
 
-def main() -> DialogueFlow:
-    transitions = {
-        'state': 'start',
-        '`What do you think of the movie?`': {
-            '#SET_USER_OPINION': {
-                '#IF(#GET_USER_OPINION) `I also like the movie! In your opinion, which storyline in "Babel" was the '
-                'most impactful? Personally, I found the storyline in Morocco to be particularly powerful.`': {
-                    'state': 'strln',
-                    '#SET_USER_STRLN': {
-                        '#IF(#GET_USER_STRLN) `You are right. The` #GET_USER_STRLN_STR `storyline is really '
-                        'interesting. What did you think of the way the movie explored cultural differences and '
-                        'communication?`': {
+transitions_babel = {
+    'state': 'babel',
+    '#THINK_MOVIE #USERINPUT #SET_USER_OPINION': {
+        '#GET_USER_OPINION': {
+            '#LIKE_MOVIE #USERINPUT': {
+                'state': 'strln',
+                '#SET_USER_STRLN': {
+                    '#GET_USER_STRLN': {
+                        '#CULTURAL #USERINPUT #SET_USER_COMM': {
                             'state': 'comm',
-                            '#SET_USER_COMM': {
-                                '#IF(#GET_USER_COMM) `So you are saying that` #GET_USER_COMM_STR ` Interesting '
-                                'thought! What did you think of the performances in the movie? Who is your favorite '
-                                'actor?`': {
-                                    'state': 'actor',
-                                    '#SET_USER_ACTOR': {
-                                        '#IF(#GET_USER_ACTOR) `Yes!` #GET_USER_ACTOR_STR `is the best! What message '
-                                        'about human connection do you think the filmmakers were trying to convey in '
-                                        'the movie?`': {
-                                            'state': 'message',
-                                            '#SET_USER_MESSAGE': {
-                                                '#IF(#GET_USER_MESSAGE) `Good point! Personally, I think it '
-                                                'emphasized our shared humanity.`': 'outro',
-                                                '`Ok! Personally, I think it emphasized our shared humanity.`': {
-                                                    'state': 'outro',
-                                                    'score': 0.1
-                                                }
-                                            }
-                                        },
-                                        '`That is fine also. What message about human connection do you think the '
-                                        'filmmakers were trying to convey in the movie?`': {
-                                            'state': 'message',
-                                            'score': 0.1
-                                        }
-                                    }
-                                },
-                                '`Ok! What did you think of the performances in the movie? Who is your favorite actor?`': {
-                                    'state': 'actor',
-                                    'score': 0.1
-                                }
-                            }
+                            '#GET_USER_COMM': 'outro',
+                                # '#ACTOR #USERINPUT #SET_USER_ACTOR': {
+                                #     'state': 'actor',
+                                #     '#GET_USER_ACTOR': {
+                                #         '#FILMMAKERS #USERINPUT #SET_USER_MESSAGE': {
+                                #             'state': 'message',
+                                #             '#GET_USER_MESSAGE': {'#HUMANITY': 'outro'},
+                                #             'error': {'#PERSONALLY': 'outro'}
+                                #         },
+                                #         'error': {
+                                #             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that'
+                                #             '." #GTTS': 'end'
+                                #         }
+                                #     },
+                                #     'error': {
+                                #         '#ALSO #USERINPUT #SET_USER_MESSAGE': 'message',
+                                #         'error': {
+                                #             '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that'
+                                #             '." #GTTS': 'end'
+                                #         }
+                                #     }
+                                # },
+                                # 'error': {'#USERINPUT #SET_USER_ACTOR': 'actor'}
+                            'error': {
+                                '#PERFORMANCES #USERINPUT #SET_USER_ACTOR': 'actor',
+                            },
                         },
-                        '`Ok! What did you think of the way the movie explored cultural differences and '
-                        'communication?`': {
-                            'state': 'comm',
-                            'score': 0.1
-                        }
+                        'error': {'#ASKAGAIN #USERINPUT #SET_USER_COMM': 'comm'}
+                    },
+                    'error': {
+                        '#COMMUNICATION #USERINPUT #SET_USER_COMM': 'comm',
+                    },
+                },
+                'error': {
+                    '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
+                }
+            },
+            'error': {
+                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
+            }
+        },
+        'error': {
+            '#OPINION #USERINPUT #SET_USER_REASON': {
+                '#GET_USER_REASON': {
+                    '#CONTINUE #USERINPUT #SET_USER_INTEREST': {
+                        'state': 'interest',
+                        '#GET_USER_INTEREST': {
+                            '#AMAZING #USERINPUT': 'strln'
+                        },
+                        'error': {'#OK': 'outro'}
+                    },
+                    'error': {
+                        '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
                     }
                 },
-                '`I do not like the movie either! What is the reason for your opinion?`': {
-                    '#SET_USER_REASON': {
-                        '#IF(#GET_USER_REASON) `Ok, so the reason is` #GET_USER_REASON_STR `Would you like to '
-                        'continue talking about the movie?`': {
-                            'state': 'interest',
-                            '#SET_USER_INTEREST': {
-                                '#IF(#GET_USER_INTEREST) `Amazing! In your opinion, which storyline in "Babel" was '
-                                'the most impactful?`': 'strln',
-                                '`Ok!`': 'outro'
-                            }
-                        },
-                        '`Ok, thank you for sharing! Would you like to continue talking about the movie?`': {
-                            'state': 'interest',
-                            'score': 0.1
-                        }
-                    }
+                'error': {
+                    '#SHARING #USERINPUT #SET_USER_INTEREST': 'interest'
                 }
+            },
+            'error': {
+                '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
             }
-        }
+        },
+    },
+    'error': {
+        '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
     }
+}
 
-    transitions_outro = {
-        'state': 'outro',
-        '`Thank you so much for talking with me today!`': 'end'     #transition into entertainment? For example: Would you like other movie recommendations -> movie_red
+transitions_outro = {
+    'state': 'outro',
+    '#THANKYOU': 'music',
+    'error': {
+        '`Sorry, I didn\'t catch that.` $RESPONSE="Sorry, I didn\'t catch that." #GTTS': 'end'
     }
+}
 
+
+def main() -> DialogueFlow:
     macros = {
         'GET_USER_OPINION': MacroNLG(get_user_opinion),
         'SET_USER_OPINION': MacroGPTJSON(
@@ -125,8 +135,8 @@ def main() -> DialogueFlow:
         'GET_USER_ACTOR_STR': MacroNLG(get_user_actor_str),
         'SET_USER_ACTOR': MacroGPTJSON(
             'Who is the speaker\'s favorite actor or actress?',
-            {V.user_comm.name: True, V.user_comm_str.name: "Brad Pitt"},
-            {V.user_comm.name: False, V.user_comm_str.name: "N/A"}),
+            {V.user_actor.name: True, V.user_actor_str.name: "Brad Pitt"},
+            {V.user_actor.name: False, V.user_actor_str.name: "N/A"}),
         'GET_USER_MESSAGE': MacroNLG(get_user_message),
         'GET_USER_MESSAGE_STR': MacroNLG(get_user_message_str),
         'SET_USER_MESSAGE': MacroGPTJSON(
@@ -145,14 +155,164 @@ def main() -> DialogueFlow:
         'SET_USER_INTEREST': MacroGPTJSON(
             'Is the speaker\'s answer likely to be "yes"?',
             {V.user_interest.name: True},
-            {V.user_interest.name: False})
+            {V.user_interest.name: False}),
+
+        # Text Macros
+        'THINK_MOVIE': MacroThinkMovie(),
+        'LIKE_MOVIE': MacroLikeMovie(),
+        'CULTURAL': MacroCultural(),
+        'ACTOR': MacroActor(),
+        'FILMMAKERS': MacroFilmmakers(),
+        'HUMANITY': MacroHumanity(),
+        'PERSONALLY': MacroPersonally(),
+        'ALSO': MacroAlso(),
+        'PERFORMANCES': MacroPerformances(),
+        'COMMUNICATION': MacroCommunication(),
+        'OPINION': MacroOpinion(),
+        'CONTINUE': MacroContinue(),
+        'AMAZING': MacroAmazing(),
+        'SHARING': MacroSharing(),
+        'THANKYOU': MacroThankYou()
     }
 
     df = DialogueFlow('start', end_state='end')
-    df.load_transitions(transitions)
     df.load_transitions(transitions_outro)
     df.add_macros(macros)
     return df
+
+
+class MacroAskAgain(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Thank you so much for talking about babel with me!'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroThankYou(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Thank you so much for talking about babel with me!'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroSharing(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Ok, thank you for sharing! Would you like to continue talking about the movie?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroAmazing(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Amazing! In your opinion, which storyline in "Babel" was the most impactful?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroContinue(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Ok, so the reason is {get_user_reason_str(vars)} Would you like to continue talking about the' \
+                 f' movie?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroOpinion(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'I do not like the movie either! What is the reason for your opinion?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroCommunication(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Ok! What did you think of the way the movie explored cultural differences and communication?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroPerformances(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Ok! What did you think of the performances in the movie? Who is your favorite actor?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroAlso(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'That is fine also. What message about human connection do you think the filmmakers were trying to ' \
+                 f'convey in the movie?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroPersonally(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Ok! Personally, I think it emphasized our shared humanity.'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroHumanity(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Good point! Personally, I think it emphasized our shared humanity.'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroFilmmakers(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'Yes! {get_user_actor_str(vars)} is the best! What message about human connection do you think' \
+                 f' the filmmakers were trying to convey in the movie?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+class MacroActor(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'So you are saying that {get_user_comm_str(vars)} Interesting thought! What did you think' \
+                 f' of the performances in the movie? Who is your favorite actor?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroCultural(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = f'You are right. The {get_user_strln_str(vars)} storyline is really interesting. What did you ' \
+                 f'think of the way the movie explored cultural differences and communication?'
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroLikeMovie(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "I also like the movie! In your opinion, which storyline in \"Babel\" was the most impactful? " \
+                 "Personally, I found the storyline in Morocco to be particularly powerful."
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
+
+
+class MacroThinkMovie(Macro):
+    def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[str]):
+        output = "I heard I was going to be talking to an I D S student today. What do you think of the movie Babel. " \
+                 "I know you watched that recently?"
+        vars['BOTLOG'] = vars['BOTLOG'] + output
+        audio(output)
+        return output
 
 
 def get_user_opinion(vars: Dict[str, Any]):
@@ -205,4 +365,4 @@ def get_user_interest(vars: Dict[str, Any]):
 
 if __name__ == '__main__':
     openai.api_key_path = utils.OPENAI_API_KEY_PATH
-    main().run()
+    # main().run()
