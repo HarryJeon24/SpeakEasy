@@ -36,7 +36,7 @@ SAVE_DIR = 'path/to/your/directory/to/save/USERINPUT.wav'
 audio_file = open('path/to/your/directory/to/USERINPUT.wav')
 ```
 
-3.  Open the `main.py` and replace the path in the following line of code with the appropriate path to the `visits.pkl` file on your computer:
+3.  Open the `main.py` and replace the path in the following line of code with the appropriate path to the `userlog.pkl` file on your computer:
 
 ```python
 path = 'path/to/your/directory/to/save/userlog.pkl'
