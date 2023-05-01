@@ -71,8 +71,8 @@ python main.py
 
 2. The application will start and prompt you to record your audio input. Press Enter to stop the recording.
 
-3. The application will transcribe your speech, respond using text-to-speech, and store the transcriptions in the `visits.pkl` file.
+3. The application will converse with you and save your name and feedback in the `userlog.pkl` file.
 
 ## Troubleshooting
 
-If you encounter issues while running the application, make sure that you have correctly installed all the required libraries, set up the API key, and provided the correct paths to the API key and `visits.pkl` files.
+If you encounter issues while running the application, make sure that you have correctly installed all the required libraries, set up the API key, and provided the correct paths to the API key and `userlog.pkl` files.
