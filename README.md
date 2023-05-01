@@ -36,14 +36,14 @@ SAVE_DIR = 'path/to/your/directory/to/save/USERINPUT.wav'
 audio_file = open('path/to/your/directory/to/USERINPUT.wav')
 ```
 
-3.  Open the `main.py` and replace the path in the following line of code with the appropriate path to the `userlog.pkl` file on your computer:
+3.  Open the `main.py` and replace the path in the following line of code with the appropriate path to the `userLog.pkl` file on your computer:
 
 ```python
-path = 'path/to/your/directory/to/save/userlog.pkl'
+path = 'path/to/your/directory/to/save/userLog.pkl'
 ```
 
 ```python
-load(df, 'path/to/your/userlog.pkl')
+load(df, 'path/to/your/userLog.pkl')
 ```
 
 4. For Windows, open the `main.py` and `evaluation.py` files and comment out the following line of code:
@@ -71,8 +71,8 @@ python main.py
 
 2. The application will start and prompt you to record your audio input. Press Enter to stop the recording.
 
-3. The application will converse with you and save your name and feedback in the `userlog.pkl` file.
+3. The application will converse with you and save your name and feedback in the `userLog.pkl` file.
 
 ## Troubleshooting
 
-If you encounter issues while running the application, make sure that you have correctly installed all the required libraries, set up the API key, and provided the correct paths to the API key and `userlog.pkl` files.
+If you encounter issues while running the application, make sure that you have correctly installed all the required libraries, set up the API key, and provided the correct paths to the API key and `userLog.pkl` files.
