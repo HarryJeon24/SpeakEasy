@@ -38,7 +38,7 @@ audio_file = open('path/to/your/directory/to/USERINPUT.wav')
 load(df, 'path/to/your/visits.pkl')
 ```
 
-4. For Windows, open the `main.py` and 'evaluation.py' files and comment out the following lines of code:
+4. For Windows, open the `main.py` and 'evaluation.py' files and comment out the following line of code:
 
 ```python
 os.system("afplay bot_output.mp3") # Mac
