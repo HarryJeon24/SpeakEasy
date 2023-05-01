@@ -331,7 +331,6 @@ class MacroAskName(Macro):
 
         return vars["ASK_NAME"]
 
-
 class MacroGetName1(Macro):
     def run(self, ngrams: Ngrams, vars: Dict[str, Any], args: List[Any]):
         name = vars[V.person_name.name]
