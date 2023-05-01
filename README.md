@@ -36,10 +36,14 @@ SAVE_DIR = 'path/to/your/directory/to/save/USERINPUT.wav'
 audio_file = open('path/to/your/directory/to/USERINPUT.wav')
 ```
 
-3. Replace the path in the following line of code with the appropriate path to the `visits.pkl` file on your computer:
+3.  Open the `main.py` and replace the path in the following line of code with the appropriate path to the `visits.pkl` file on your computer:
 
 ```python
-load(df, 'path/to/your/visits.pkl')
+path = 'path/to/your/directory/to/save/userlog.pkl'
+```
+
+```python
+load(df, 'path/to/your/userlog.pkl')
 ```
 
 4. For Windows, open the `main.py` and 'evaluation.py' files and comment out the following line of code:
