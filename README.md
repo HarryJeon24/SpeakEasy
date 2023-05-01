@@ -59,7 +59,7 @@ Then, uncomment the following lines of code:
  # time.sleep(MP3("bot_output.mp3").info.length)
 ```
 
-5. For Mac, to be filled...
+5. For Mac, no changes need to be made to the code. However, the installation of packages may be difficult. If this is the case, please try with a Windows device. 
 
 ## Running the Application
 
