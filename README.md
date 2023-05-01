@@ -12,7 +12,11 @@ This repository contains a Python script for SpeakEasy chatbot application.
 
 1. Python 3.6 or higher installed on your computer.
 
-2. Install the required Python libraries.
+2. Install the required Python libraries by entering the following commands in your terminal:
+
+```terminal
+pip install openai emora-stdm pyaudio gtts mutagen
+```
 
 ## Setup
 
